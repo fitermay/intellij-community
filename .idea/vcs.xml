@@ -24,8 +24,7 @@
   </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/android" vcs="Git" />
-    <mapping directory="$PROJECT_DIR$/android/tools-base" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python/python-skeletons" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python/quartz" vcs="Git" />
   </component>
 </project>
-
