@@ -303,11 +303,7 @@ private layoutFull(Map args, String target, Set usedJars) {
       }
     }
 
-    dir("help") {
-      fileset(dir: "$home/python/help") {
-        include(name: "*.pdf")
-      }
-    }
+
 
     dir("helpers") {
       fileset(dir: "$pythonCommunityHome/helpers")
