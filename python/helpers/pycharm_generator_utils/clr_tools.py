@@ -4,6 +4,21 @@
 """
 __author__ = 'Ilya.Kazakevich'
 
+IS_CLR = False
+try:
+    import clr
+    IS_CLR = hasattr(clr, 'AddReference')
+except ImportError:
+    pass
+
+IS_PYTHON_DOT_NET = False
+try:
+    import Python.Runtime
+except ImportError:
+    pass
+else:
+    IS_PYTHON_DOT_NET = True
+    clr.setPreload(True)
 
 def get_namespace_by_name(object_name):
     """
@@ -61,3 +76,81 @@ def _get_attr_by_name(obj, name):
     for part in parts:
         result = getattr(result, part)
     return result
+
+def get_assembly_namespaces(assembly_name, assembly_path):
+    from System.Reflection import ReflectionTypeLoadException
+    try:
+        assembly = clr.AddReference(assembly_name)
+        types = assembly.GetTypes()
+    except ReflectionTypeLoadException:
+        return []
+    else:
+        return sorted(set([str(type.Namespace) for type in types ]))
+
+
+if IS_PYTHON_DOT_NET:
+
+    def get_applicable_assemblies(module_name, _namespace_to_assembly = {}):
+        if not _namespace_to_assembly:
+            for assembly in clr.ListAssemblies(False):
+                namespaces = get_assembly_namespaces(assembly ,clr.FindAssembly(assembly))
+                for namespace in namespaces:
+                    curr_lst = _namespace_to_assembly.get(namespace, [])
+                    curr_lst.append(assembly)
+                    _namespace_to_assembly[namespace] =  curr_lst
+
+        return _namespace_to_assembly.get(module_name, [])
+
+
+    from System import Type
+    def get_clr_type(wrapped_type):
+        type_name = None
+        try:
+            type_name = wrapped_type.__module__ + "." + wrapped_type.__name__
+        except AttributeError:
+            raise TypeError("No such CLR type " + str(wrapped_type))
+
+
+        type = Type.GetType(type_name)
+        if type:
+            return type
+
+        for assembly in get_applicable_assemblies(wrapped_type.__module__ ):
+            type = Type.GetType(type_name + "," + assembly)
+            if type:
+                break
+
+        if not type:
+            raise TypeError("No such CLR type " + str(wrapped_type) + "name " + type_name)
+        return type
+
+
+else:
+    def get_clr_type(wrapped_type):
+        return  clr.GetClrType(wrapped_type)
+
+
+if IS_PYTHON_DOT_NET:
+    from System import String
+    def is_clr_type(clr_type):
+        if not clr_type: return False
+        if not type(String) == type(clr_type):
+            return False
+        try:
+            get_clr_type(clr_type)
+        except TypeError:
+            return False
+        else:
+            return True
+else:
+    def is_clr_type(clr_type):
+        if not clr_type: return False
+        try:
+            clr.GetClrType(clr_type)
+            return True
+        except TypeError:
+            return False
+
+def is_clr_assembly(mod_name):
+    return True if clr.FindAssembly(mod_name) else False
+
