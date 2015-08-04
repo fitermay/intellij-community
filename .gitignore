@@ -3,6 +3,8 @@
 /system
 .idea/workspace.xml
 /out
+.idea
+.jps-build-data
 .DS_Store
 /test-system
 /test-config
