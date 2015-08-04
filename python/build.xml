@@ -1,8 +1,8 @@
 <project name="PyCharm Community Edition" default="all">
   <property name="project.home" value="${basedir}/.."/>
   <property name="python.home" value="${basedir}"/>
-  <property name="out.dir" value="${project.home}/out"/>
-  <property name="tmp.dir" value="${project.home}/out/tmp"/>
+  <property name="out.dir" value="${project.home}/python/out"/>
+  <property name="tmp.dir" value="${project.home}/python/out/tmp"/>
 
   <target name="cleanup">
     <delete dir="${out.dir}" failonerror="false"/>
