@@ -28,6 +28,7 @@ import com.intellij.lang.annotation.Annotation;
 import com.intellij.lang.annotation.AnnotationHolder;
 import com.intellij.lang.annotation.ExternalAnnotator;
 import com.intellij.openapi.application.ApplicationInfo;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.impl.ApplicationInfoImpl;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
@@ -257,7 +258,9 @@ public class Pep8ExternalAnnotator extends ExternalAnnotator<Pep8ExternalAnnotat
 
       if (problemElement != null) {
         TextRange problemRange = problemElement.getTextRange();
-        if (!(problemElement instanceof PsiWhiteSpace) && crossesLineBoundary(document, text, problemRange)) {
+        // Multi-line warnings are shown only in the gutter and it's not the desired behavior from the usability point of view.
+        // So we register it only on that line where pep8.py found the problem originally.
+        if (crossesLineBoundary(document, text, problemRange)) {
           final int lineEndOffset;
           if (document != null) {
             lineEndOffset = line >= document.getLineCount() ? document.getTextLength() - 1 : document.getLineEndOffset(line);
@@ -272,7 +275,8 @@ public class Pep8ExternalAnnotator extends ExternalAnnotator<Pep8ExternalAnnotat
           problemRange = new TextRange(offset, lineEndOffset);
         }
         final Annotation annotation;
-        final String message = "PEP 8: " + problem.myDescription;
+        final boolean inInternalMode = ApplicationManager.getApplication().isInternal();
+        final String message = "PEP 8: " + (inInternalMode ? problem.myCode + " " : "") + problem.myDescription;
         if (annotationResult.level == HighlightDisplayLevel.ERROR) {
           annotation = holder.createErrorAnnotation(problemRange, message);
         }

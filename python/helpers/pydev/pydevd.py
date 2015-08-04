@@ -263,35 +263,35 @@ class CheckOutputThread(PyDBDaemonThread):
         pyDb.output_checker = self
 
     def OnRun(self):
-            if self.dontTraceMe:
+        if self.dontTraceMe:
 
-                disable_tracing = True
-        
-                if pydevd_vm_type.GetVmType() == pydevd_vm_type.PydevdVmType.JYTHON and sys.hexversion <= 0x020201f0:
-                    # don't run untraced threads if we're in jython 2.2.1 or lower
-                    # jython bug: if we start a thread and another thread changes the tracing facility
-                    # it affects other threads (it's not set only for the thread but globally)
-                    # Bug: http://sourceforge.net/tracker/index.php?func=detail&aid=1870039&group_id=12867&atid=112867
-                    disable_tracing = False
-        
-                if disable_tracing:
-                    pydevd_tracing.SetTrace(None)  # no debugging on this thread
-                    
-            while not self.killReceived:
-                if not self.pyDb.haveAliveThreads() and self.pyDb.writer.empty() \
-                        and not has_data_to_redirect():
-                    try:
-                        pydev_log.debug("No alive threads, finishing debug session")
-                        self.pyDb.FinishDebuggingSession()
-                        killAllPydevThreads()
-                    except:
-                        traceback.print_exc()
+            disable_tracing = True
 
-                    self.killReceived = True
+            if pydevd_vm_type.GetVmType() == pydevd_vm_type.PydevdVmType.JYTHON and sys.hexversion <= 0x020201f0:
+                # don't run untraced threads if we're in jython 2.2.1 or lower
+                # jython bug: if we start a thread and another thread changes the tracing facility
+                # it affects other threads (it's not set only for the thread but globally)
+                # Bug: http://sourceforge.net/tracker/index.php?func=detail&aid=1870039&group_id=12867&atid=112867
+                disable_tracing = False
 
-                self.pyDb.checkOutputRedirect()
+            if disable_tracing:
+                pydevd_tracing.SetTrace(None)  # no debugging on this thread
 
-                time.sleep(0.3)
+        while not self.killReceived:
+            time.sleep(0.3)
+            if not self.pyDb.haveAliveThreads() and self.pyDb.writer.empty() \
+                    and not has_data_to_redirect():
+                try:
+                    pydev_log.debug("No alive threads, finishing debug session")
+                    self.pyDb.FinishDebuggingSession()
+                    killAllPydevThreads()
+                except:
+                    traceback.print_exc()
+
+                self.killReceived = True
+
+            self.pyDb.checkOutputRedirect()
+
 
     def doKillPydevThread(self):
         self.killReceived = True
@@ -423,8 +423,9 @@ class PyDB:
                 pydev_log.error_once(
                     'Error in debugger: Found PyDBDaemonThread not marked with is_pydev_daemon_thread=True.\n')
 
-            if isThreadAlive(t) and not t.isDaemon():
-                return True
+            if isThreadAlive(t):
+                if not t.isDaemon() or hasattr(t, "__pydevd_main_thread"):
+                    return True
 
         return False
 
@@ -589,11 +590,11 @@ class PyDB:
                                     # add import hooks for matplotlib patches if only debug console was started
                                     try:
                                         self.init_matplotlib_in_debug_console()
-                                        self.mpl_hooks_in_debug_console = True
                                         self.mpl_in_use = True
                                     except:
-                                        pydev_log.error("Matplotlib support in debug console failed\n")
-                                        traceback.print_exc()
+                                        PydevdLog(2, "Matplotlib support in debug console failed", traceback.format_exc())
+                                    finally:
+                                        self.mpl_hooks_in_debug_console = True
 
                                 if int_cmd.canBeExecutedBy(curr_thread_id):
                                     PydevdLog(2, "processing internal command ", str(int_cmd))
@@ -2045,7 +2046,7 @@ def _locked_settrace(
 
         PyDBCommandThread(debugger).start()
         CheckOutputThread(debugger).start()
-        
+
         #Suspend as the last thing after all tracing is in place.
         if suspend:
             debugger.setSuspend(t, CMD_THREAD_SUSPEND)

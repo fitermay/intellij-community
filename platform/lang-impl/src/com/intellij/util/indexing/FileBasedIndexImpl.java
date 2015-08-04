@@ -272,6 +272,8 @@ public class FileBasedIndexImpl extends FileBasedIndex {
       if (currentVersionCorrupted) {
         FileUtil.deleteWithRenaming(indexRoot);
         indexRoot.mkdirs();
+        // serialization manager is initialized before and use removed index root so we need to reinitialize it
+        mySerializationManagerEx.reinitializeNameStorage();
       }
 
       FileBasedIndexExtension[] extensions = Extensions.getExtensions(FileBasedIndexExtension.EXTENSION_POINT_NAME);
@@ -343,6 +345,8 @@ public class FileBasedIndexImpl extends FileBasedIndex {
 
         @Override
         public void run() {
+          mySerializationManagerEx.flushNameStorage();
+
           if (lastModCount == myLocalModCount) {
             flushAllIndices(lastModCount);
           }
@@ -700,9 +704,6 @@ public class FileBasedIndexImpl extends FileBasedIndex {
       }
     }
 
-    if (!HeavyProcessLatch.INSTANCE.isRunning() && modCount == myLocalModCount) { // do not interfere with 'main' jobs
-      mySerializationManagerEx.flushNameStorage();
-    }
     ContentHashesSupport.flushContentHashes();
   }
 
@@ -1740,16 +1741,20 @@ public class FileBasedIndexImpl extends FileBasedIndex {
       currentFC.putUserData(ourPhysicalContentKey, Boolean.TRUE);
     }
 
+    boolean updateCalculated = false;
     try {
       // important: no hard referencing currentFC to avoid OOME, the methods introduced for this purpose!
+      // important: update is called out of try since possible indexer extension is HANDLED as single file fail / restart indexing policy
       final Computable<Boolean> update = index.update(inputId, currentFC);
+      updateCalculated = true;
+
       scheduleUpdate(indexId,
                      createUpdateComputableWithBufferingDisabled(update),
                      createIndexedStampUpdateRunnable(indexId, file, currentFC != null)
       );
     } catch (RuntimeException exception) {
       Throwable causeToRebuildIndex = getCauseToRebuildIndex(exception);
-      if (causeToRebuildIndex != null) {
+      if (causeToRebuildIndex != null && (updateCalculated || causeToRebuildIndex instanceof IOException)) {
         LOG.error("Exception in update single index:" + exception);
         requestRebuild(indexId, exception);
         return;
