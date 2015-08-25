@@ -36,6 +36,10 @@
   <target name="plugin" depends="init">
     <call_gant script="${python.home}/build/python_plugin_build.gant"/>
   </target>
+
+  <target name="quartz" depends="init">
+    <call_gant script="${python.home}/build/qzpycharm_community_build.gant"/>
+  </target>
   <!--
   <target name="test" depends="init">
     <call_gant script="${project.home}/build/scripts/tests.gant"/>
