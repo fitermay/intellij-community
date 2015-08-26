@@ -2,10 +2,13 @@
 /config
 /system
 .idea/workspace.xml
+.idea/dictionaries/
 /out
 .jps-build-data
 .DS_Store
 /test-system
 /test-config
-/python/quartz
+python/quartz/
+python/python-skeletons/
+python/ficc-bridge/
 *.pyc

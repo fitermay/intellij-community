@@ -189,6 +189,7 @@
       <module fileurl="file://$PROJECT_DIR$/python/quartz/qz-helpers/qz-helpers.iml" filepath="$PROJECT_DIR$/python/quartz/qz-helpers/qz-helpers.iml" group="quartz" />
       <module fileurl="file://$PROJECT_DIR$/python/quartz/qz-pkg/qz-pkg.iml" filepath="$PROJECT_DIR$/python/quartz/qz-pkg/qz-pkg.iml" group="quartz" />
       <module fileurl="file://$PROJECT_DIR$/python/quartz/qz-plugin.iml" filepath="$PROJECT_DIR$/python/quartz/qz-plugin.iml" group="quartz" />
+      <module fileurl="file://$PROJECT_DIR$/python/ficc-bridge/qzpy/qzpy.iml" filepath="$PROJECT_DIR$/python/ficc-bridge/qzpy/qzpy.iml" group="quartz" />
       <module fileurl="file://$PROJECT_DIR$/xml/relaxng/relaxng.iml" filepath="$PROJECT_DIR$/xml/relaxng/relaxng.iml" group="xml" />
       <module fileurl="file://$PROJECT_DIR$/platform/remote-servers/agent-rt/remote-servers-agent-rt.iml" filepath="$PROJECT_DIR$/platform/remote-servers/agent-rt/remote-servers-agent-rt.iml" group="platform" />
       <module fileurl="file://$PROJECT_DIR$/platform/remote-servers/api/remote-servers-api.iml" filepath="$PROJECT_DIR$/platform/remote-servers/api/remote-servers-api.iml" group="platform" />
