@@ -339,6 +339,9 @@ private layoutQzPlugin(layouts)
       dir("qz-helpers") {
         fileset(dir: "$pythonCommunityHome/quartz/qz-helpers")
       }
+      dir("qzpy") {
+        fileset(dir: "$pythonCommunityHome/ficc-bridge/qzpy")
+      }
     }
   }
 }
