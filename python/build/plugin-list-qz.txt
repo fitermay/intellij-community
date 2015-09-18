@@ -3,16 +3,9 @@ cvs-core
 cvs-plugin
 javacvs-src
 smartcvs-src
-svn4idea
-git4idea
-remote-servers-git
-hg4idea
 tasks
 tasks-core
 tasks-api
-jira
-github
-terminal
 IntelliLang
 IntelliLang-xml
 IntelliLang-js
