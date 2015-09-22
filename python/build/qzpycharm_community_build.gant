@@ -50,7 +50,7 @@ private List pycharmImplementationModules() {   //modules to put into pycharm.ja
 
 private List modules() {
   return [
-    "python-pydev", "colorSchemes", pycharmPlatformApiModules(), pycharmImplementationModules(), pluginFilter
+    "python-pydev", "java-runtime", "colorSchemes", pycharmPlatformApiModules(), pycharmImplementationModules(), pluginFilter
   ].flatten()
 }
 
@@ -97,7 +97,7 @@ target('default': "Build artifacts") {
   projectBuilder.dryRun = dryRun
 
   if (!dryRun) {
-    forceDelete(paths.sandbox)
+    //forceDelete(paths.sandbox)
     ant.mkdir(dir: paths.sandbox)
   }
 
