@@ -47,6 +47,7 @@ import com.jetbrains.python.psi.PyStringLiteralExpression;
 import com.jetbrains.python.sdk.PySdkUtil;
 import com.jetbrains.python.sdk.PythonEnvUtil;
 import com.jetbrains.python.sdk.PythonSdkType;
+import com.jetbrains.python.sdk.flavors.PythonSdkFlavor;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -509,7 +510,13 @@ public class PyPackageManagerImpl extends PyPackageManager {
       final Map<String, String> environment = new HashMap<String, String>(System.getenv());
       PythonEnvUtil.setPythonUnbuffered(environment);
       PythonEnvUtil.setPythonDontWriteBytecode(environment);
-      GeneralCommandLine commandLine = new GeneralCommandLine(cmdline).withWorkDirectory(workingDir).withEnvironment(environment);
+      final PythonSdkFlavor flavor = PythonSdkFlavor.getFlavor(mySdk);
+
+      final GeneralCommandLine commandLine = new GeneralCommandLine(cmdline).withWorkDirectory(workingDir).withEnvironment(environment);
+      if (flavor != null)
+      {
+        flavor.patchHelperCommandLine(commandLine);
+      }
       Process process;
       if (useSudo) {
         process = ExecUtil.sudo(commandLine, "Please enter your password to make changes in system packages: ");
