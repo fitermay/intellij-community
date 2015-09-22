@@ -97,7 +97,7 @@ target('default': "Build artifacts") {
   projectBuilder.dryRun = dryRun
 
   if (!dryRun) {
-    //forceDelete(paths.sandbox)
+    forceDelete(paths.sandbox)
     ant.mkdir(dir: paths.sandbox)
   }
 
@@ -126,6 +126,23 @@ target('default': "Build artifacts") {
     exclude(name: "tips")
   }
 
+  ant.patternset(id: "resources.pt") {
+    include(name: "**/?*.properties")
+    include(name: "**/?*.template")
+    include(name: "**/?*.xml")
+    include(name: "**/?*.gif")
+    include(name: "**/?*.png")
+    include(name: "**/?*.txt")
+    include(name: "**/?*.jpeg")
+    include(name: "**/?*.jpg")
+    include(name: "**/?*.html")
+    include(name: "**/?*.dtd")
+    include(name: "**/?*.tld")
+    include(name: "**/?*.py")
+    include(name: "**/?*.ft")
+    include(name: "**/?*.dic")
+    exclude(name: "**/plugin.xml")
+  }
   zipSources(home, paths.artifacts)
 
   def usedJars = buildModulesAndCollectUsedJars(modules(), approvedJars(), ["/ant/"])
@@ -332,6 +349,12 @@ private layoutQzPlugin(layouts)
         jar("qz_plugin.jar") {
           module("qz-plugin")
         }
+      }
+      dir("qz-pkg") {
+      fileset(dir: "$pythonCommunityHome/quartz/qz-pkg/resources") {
+        patternset(refid: "resources.pt")
+        type(type: "file")
+      }
       }
       dir("qz-pkg") {
         fileset(dir: "$pythonCommunityHome/quartz/qz-pkg/resources")
