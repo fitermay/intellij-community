@@ -97,7 +97,7 @@ target('default': "Build artifacts") {
   projectBuilder.dryRun = dryRun
 
   if (!dryRun) {
-    forceDelete(paths.sandbox)
+    //forceDelete(paths.sandbox)
     ant.mkdir(dir: paths.sandbox)
   }
 
@@ -350,11 +350,12 @@ private layoutQzPlugin(layouts)
           module("qz-plugin")
         }
       }
-      dir("qz-pkg") {
-      fileset(dir: "$pythonCommunityHome/quartz/qz-pkg/resources") {
-        patternset(refid: "resources.pt")
-        type(type: "file")
-      }
+
+      dir("fileTemplates") {
+        fileset(dir: "$pythonCommunityHome/quartz/qz-plugin/resources/fileTemplates") {
+          patternset(refid: "resources.pt")
+          type(type: "file")
+        }
       }
       dir("qz-pkg") {
         fileset(dir: "$pythonCommunityHome/quartz/qz-pkg/resources")
