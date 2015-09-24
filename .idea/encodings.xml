@@ -3,6 +3,7 @@
   <component name="Encoding" useUTFGuessing="true" native2AsciiForPropertiesFiles="false">
     <file url="file://$PROJECT_DIR$/python/quartz/qz-pkg/resources/ext-src.zip" charset="windows-1252" />
     <file url="file://$PROJECT_DIR$/python/quartz/qz-pkg/resources/net-skeletons.zip" charset="windows-1252" />
+    <file url="file://$PROJECT_DIR$/python/quartz/qz-plugin/wiki/root/checkout.png" charset="windows-1252" />
     <file url="PROJECT" charset="UTF-8" />
   </component>
 </project>
