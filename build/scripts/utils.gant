@@ -133,6 +133,11 @@ binding.setVariable("loadProject", {
       classpath "$jdkHome/lib/tools.jar"
     }
   }
+  jdk("1.8", jdkHome) {
+    if (!mac) {
+      classpath "$jdkHome/lib/tools.jar"
+    }
+  }
   projectBuilder.buildIncrementally = Boolean.parseBoolean(p("jps.build.incrementally", "false"))
   def dataDirName = projectBuilder.buildIncrementally ? ".jps-incremental-build" : ".jps-build-data"
   projectBuilder.dataStorageRoot = new File("$home/$dataDirName")
@@ -688,7 +693,7 @@ private Map readIdeaProperties(Map args) {
   ideaPropertiesFile.close();
 
   def defaultProperties = ["CVS_PASSFILE": "~/.cvspass",
-                           "JVMVersion": "1.6*",
+                           "JVMVersion": "1.8*",
                            "com.apple.mrj.application.live-resize": "false",
                            "idea.paths.selector": args.system_selector,
                            "idea.executable": args.executable,
