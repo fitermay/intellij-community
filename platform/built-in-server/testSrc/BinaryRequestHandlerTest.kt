@@ -20,7 +20,7 @@ import org.jetbrains.io.NettyUtil
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.RuleChain
-import java.util.UUID
+import java.util.*
 
 // we don't handle String in efficient way - because we want to test readContent/readChars also
 public class BinaryRequestHandlerTest {
@@ -29,10 +29,10 @@ public class BinaryRequestHandlerTest {
   private val _chain = RuleChain
       .outerRule(fixtureManager)
 
-  Rule
+  @Rule
   public fun getChain(): RuleChain = _chain
 
-  Test
+  @Test
   public fun test() {
     val text = "Hello!"
     val result = AsyncPromise<String>()
@@ -42,7 +42,7 @@ public class BinaryRequestHandlerTest {
         channel.pipeline().addLast(object : Decoder() {
           override fun messageReceived(context: ChannelHandlerContext, input: ByteBuf) {
             val requiredLength = 4 + text.length()
-            val response = readContent(input, context, requiredLength) {(buffer, context, isCumulateBuffer) -> buffer.toString(buffer.readerIndex(), requiredLength, CharsetUtil.UTF_8) }
+            val response = readContent(input, context, requiredLength) {buffer, context, isCumulateBuffer -> buffer.toString(buffer.readerIndex(), requiredLength, CharsetUtil.UTF_8) }
             if (response != null) {
               result.setResult(response)
             }
@@ -105,7 +105,7 @@ public class BinaryRequestHandlerTest {
       private var state = State.HEADER
 
       private enum class State {
-        HEADER
+        HEADER,
         CONTENT
       }
 

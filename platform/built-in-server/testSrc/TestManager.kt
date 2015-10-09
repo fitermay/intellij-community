@@ -26,8 +26,8 @@ class TestManager(val projectFixture: IdeaProjectTestFixture) : TestWatcher() {
 
   private var ioFileToDelete: File? = null
 
-  Retention(RetentionPolicy.RUNTIME)
-  Target(ElementType.METHOD)
+  @Retention(RetentionPolicy.RUNTIME)
+  @Target(ElementType.METHOD)
   annotation public class TestDescriptor(public val filePath: String,
                                          public val line: Int = -1,
                                          public val column: Int = -1,
@@ -63,7 +63,7 @@ class TestManager(val projectFixture: IdeaProjectTestFixture) : TestWatcher() {
     }
 
     invokeAndWaitIfNeed {
-      val normalizedFilePath = FileUtilRt.toSystemIndependentName(filePath)
+      val normalizedFilePath = FileUtilRt.toSystemIndependentName(filePath!!)
       if (annotation!!.relativeToProject) {
         val root = projectFixture.getProject().getBaseDir()
         runWriteAction {
@@ -105,7 +105,7 @@ class TestManager(val projectFixture: IdeaProjectTestFixture) : TestWatcher() {
       fileToDelete = null
     }
 
-    if (ioFileToDelete != null && !FileUtilRt.delete(ioFileToDelete)) {
+    if (ioFileToDelete != null && !FileUtilRt.delete(ioFileToDelete!!)) {
       ioFileToDelete!!.deleteOnExit()
     }
 
