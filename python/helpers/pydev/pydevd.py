@@ -176,6 +176,19 @@ if IS_PY3K:
     DONT_TRACE['utf_8.py'] = LIB_FILE
 
 
+if not os.getenv("PYCHARM_QZ_TRACEALL"):
+    ##dag cell
+    DONT_TRACE['cell.py'] = LIB_FILE
+    #dag inputparser
+    DONT_TRACE['inputparser.py'] = LIB_FILE
+    DONT_TRACE['cdag.py'] = LIB_FILE
+    ###importer
+    DONT_TRACE['qzwin_importer.py'] = LIB_FILE
+    DONT_TRACE['performance.py'] = LIB_FILE
+
+
+
+
 connected = False
 bufferStdOutToServer = False
 bufferStdErrToServer = False
@@ -548,6 +561,10 @@ class PyDB:
     def processInternalCommands(self):
         '''This function processes internal commands
         '''
+        ##need this line here otherwise getInternalQueue might deadlock when creating Queue,
+        # since Queue imports threading and another thread may be holding the import lock
+        ## long story short we must not have any imports inside this block --YF
+        import threading
         self._main_lock.acquire()
         try:
 
@@ -579,7 +596,7 @@ class PyDB:
                             self.writer.addCommand(self.cmdFactory.makeThreadCreatedMessage(t))
 
 
-                        queue = self.getInternalQueue(thread_id)
+                        queue = self. getInternalQueue(thread_id)
                         cmdsToReadd = []  # some commands must be processed by the thread itself... if that's the case,
                                             # we will re-add the commands to the queue after executing.
                         try:
