@@ -279,6 +279,11 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
   }
 
   private void ipythonInPrompt() {
+    if (myConsoleCommunication.isExecuting())
+    {
+       executingPrompt();
+       return;
+    }
     myConsoleView.setPromptAttributes(new ConsoleViewContentType("", ConsoleViewContentType.USER_INPUT_KEY) {
       @Override
       public TextAttributes getAttributes() {
@@ -310,6 +315,10 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
   public void commandExecuted(boolean more) {
     if (!more && !ipythonEnabled()) {
       ordinaryPrompt();
+    }
+    else if (!more)
+    {
+       ipythonInPrompt();
     }
   }
 
