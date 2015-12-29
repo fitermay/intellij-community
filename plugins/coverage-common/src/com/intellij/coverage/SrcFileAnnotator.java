@@ -395,6 +395,8 @@ public class SrcFileAnnotator implements Disposable {
                 ApplicationManager.getApplication().invokeLater(new Runnable() {
                   public void run() {
                     if (lineNumberInCurrent >= document.getLineCount()) return;
+                    if (myDocument == null)
+                      return;
                     final RangeHighlighter highlighter =
                       createRangeHighlighter(suite.getLastCoverageTimeStamp(), markupModel, coverageByTestApplicable, executableLines,
                                              qualifiedName, line, lineNumberInCurrent, suite, postProcessedLines);
