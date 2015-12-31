@@ -5,6 +5,7 @@
     <content url="file://$MODULE_DIR$/helpers">
       <sourceFolder url="file://$MODULE_DIR$/helpers/py2only" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/helpers" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/helpers/pydev" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="QZWinPython 2.6.5 (C:\Users\zk121mn\user\ext\win32_vc9\bin\python.exe)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

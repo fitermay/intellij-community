@@ -14,9 +14,10 @@
     <orderEntry type="module" module-name="platform-main" />
     <orderEntry type="module" module-name="ShortcutPromoter" />
     <orderEntry type="module" module-name="ipnb" />
-    <orderEntry type="module" module-name="qz-plugin" />
     <orderEntry type="module" module-name="java-runtime" scope="RUNTIME" />
     <orderEntry type="module" module-name="jira" />
+    <orderEntry type="module" module-name="coverage-common" />
+    <orderEntry type="module" module-name="qz-plugin" />
     <orderEntry type="module" module-name="settings-repository" />
   </component>
 </module>
