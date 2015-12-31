@@ -349,10 +349,12 @@ private layoutQzPlugin(layouts)
         jar("qz_plugin.jar") {
           module("qz-plugin")
         }
+        fileset(dir: "${pythonCommunityHome}/quartz-plugin/qz-plugin/lib")
+
       }
 
       dir("fileTemplates") {
-        fileset(dir: "$pythonCommunityHome/quartz/qz-plugin/resources/fileTemplates") {
+        fileset(dir: "$pythonCommunityHome/quartz-plugin/qz-plugin/resources/fileTemplates") {
           patternset(refid: "resources.pt")
           type(type: "file")
         }
@@ -361,7 +363,7 @@ private layoutQzPlugin(layouts)
         fileset(dir: "$pythonCommunityHome/quartz/qz-pkg/resources")
       }
       dir("qz-helpers") {
-        fileset(dir: "$pythonCommunityHome/quartz/qz-helpers")
+        fileset(dir: "$pythonCommunityHome/quartz-plugin/qz-helpers")
       }
       dir("qzpy") {
         fileset(dir: "$pythonCommunityHome/ficc-bridge/qzpy")
