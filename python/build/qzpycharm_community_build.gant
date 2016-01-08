@@ -198,8 +198,8 @@ public layoutCommunity(String classesPath, Set usedJars) {
   List resourcePaths = ["$ch/community-resources/src",
     "$ch/platform/icons/src",
     "$pythonCommunityHome/resources"]
-  buildWinLauncher("$ch", "$ch/bin/WinLauncher/WinLauncher.exe", launcher,
-                   appInfo, "$pythonCommunityHome/build/pycharm_community_launcher.properties", system_selector, resourcePaths)
+//  buildWinLauncher("$ch", "$ch/bin/WinLauncher/WinLauncher.exe", launcher,
+//                   appInfo, "$pythonCommunityHome/build/pycharm_community_launcher.properties", system_selector, resourcePaths)
   buildWinLauncher("$ch", "$ch/bin/WinLauncher/WinLauncher64.exe", launcher64,
                    appInfo, "$pythonCommunityHome/build/pycharm64_community_launcher.properties", system_selector, resourcePaths)
 
@@ -214,6 +214,7 @@ private layoutPlugins(layouts) {
     layouts.layoutPlugin("ipnb") {
       fileset(dir: "$pythonCommunityHome/ipnb/lib")
     }
+
   }
 
   layouts.layoutCommunityPlugins(ch)
@@ -348,8 +349,23 @@ private layoutQzPlugin(layouts)
       dir("lib") {
         jar("qz_plugin.jar") {
           module("qz-plugin")
+          //Needed for coverage support. This plugin is inlined
+          module("coverage-common") {
+            patternset(refid: "resources.excluded")
+          }
         }
+
+        jar("resources_en.jar") {
+          module("coverage-common") {
+            patternset(refid: "resources.included")
+          }
+        }
+
         fileset(dir: "${pythonCommunityHome}/quartz-plugin/qz-plugin/lib")
+        fileset(dir: "${home}/plugins/coverage-common/lib") {
+          exclude(name: "finder.jar")
+          exclude(name: "**/coverage-src.zip")
+        }
 
       }
 
@@ -368,6 +384,10 @@ private layoutQzPlugin(layouts)
       dir("qzpy") {
         fileset(dir: "$pythonCommunityHome/ficc-bridge/qzpy")
       }
+
+
+
+
     }
   }
 }
@@ -388,7 +408,7 @@ private layoutWin(Map args, String target) {
   }
 
   winScripts(target, ch, "pycharm.bat", args)
-  winVMOptions(target, null, "pycharm.exe", "pycharm64.exe")
+  winVMOptions(target, null, null, "pycharm64.exe")
   ant.copy(file: "$home/python/help/pycharmhelp.jar", todir: "$target/help", failonerror: false)
   ant.copy(todir: "$target/jre64", failonerror: false) {
     fileset(dir: "$home/../jre64")
