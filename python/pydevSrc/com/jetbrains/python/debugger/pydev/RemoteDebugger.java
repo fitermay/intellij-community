@@ -141,7 +141,20 @@ public class RemoteDebugger implements ProcessDebugger {
 
   @Override
   public void consoleExec(String threadId, String frameId, String expression, PyDebugCallback<String> callback) {
-    final ConsoleExecCommand command = new ConsoleExecCommand(this, threadId, frameId, expression);
+    EvaluateCommand command = new EvaluateCommand(this, threadId, frameId, expression, true, true)
+    {
+      @Override
+      protected ResponseProcessor createResponseProcessor() {
+        return new ResponseProcessor<String>() {
+          @Override
+          protected String parseResponse(ProtocolFrame response) throws PyDebuggerException {
+            final PyDebugValue value = ProtocolParser.parseValue(response.getPayload(), myDebugProcess);
+            return value.toString();
+
+          }
+        };
+      }
+    };
     command.execute(callback);
   }
 
