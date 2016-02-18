@@ -33,7 +33,7 @@ public class PyConsoleUtil {
   public static final String ORDINARY_PROMPT = ">>> ";
   public static final String INPUT_PROMPT = ">? ";
   public static final String INDENT_PROMPT = "... ";
-  static final String HELP_PROMPT = "help> ";
+  public static final String HELP_PROMPT = "help> ";
   public static final String EXECUTING_PROMPT = "";
 
   private static final String IPYTHON_PAGING_PROMPT = "---Return to continue, q to quit---";
