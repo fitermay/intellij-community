@@ -106,4 +106,11 @@ public class PythonDebugConsoleCommunication extends AbstractConsoleCommunicatio
   public boolean isSuspended() {
     return myDebugProcess.getSession().isSuspended();
   }
+
+  public void resume()
+  {
+     myDebugProcess.getSession().resume();
+  }
+
+
 }
