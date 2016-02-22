@@ -9,6 +9,7 @@
 /test-system
 /test-config
 python/quartz/
+python/quartz-plugin/
 python/python-skeletons/
 python/ficc-bridge/
 *.pyc
