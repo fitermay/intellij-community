@@ -22,11 +22,18 @@
       </list>
     </option>
   </component>
+  <component name="GitSharedSettings">
+    <option name="FORCE_PUSH_PROHIBITED_PATTERNS">
+      <list />
+    </option>
+  </component>
   <component name="VcsDirectoryMappings">
     <mapping directory="" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/python/ficc-bridge" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/python/python-skeletons" vcs="Git" />
     <mapping directory="$PROJECT_DIR$/python/quartz" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python/quartz-plugin" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/python/quartz-plugin/qz-plugin/wiki/root" vcs="Git" />
     <mapping directory="C:\Repos\idea\python\quartz\qz-plugin\wiki\root" vcs="Git" />
   </component>
 </project>
