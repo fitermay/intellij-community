@@ -35,7 +35,7 @@ import java.util.Map;
 /**
  * @author traff
  */
-public class PythonToolWindowConsoleRunner extends PydevConsoleRunner {
+public class PythonToolWindowConsoleRunner extends PydevConsoleRunnerImpl {
   private ToolWindow myToolWindow;
 
   public PythonToolWindowConsoleRunner(@NotNull Project project,

@@ -109,7 +109,7 @@ public class PydevConsoleRunnerFactory extends PythonConsoleRunnerFactory {
     Map<String, String> envs = Maps.newHashMap(settingsProvider.getEnvs());
     String ipythonEnabled = PyConsoleOptions.getInstance(project).isIpythonEnabled() ? "True" : "False";
     envs.put(PythonEnvUtil.IPYTHONENABLE, ipythonEnabled);
-    
+
     return createConsoleRunner(project, sdk, workingDir, envs, PyConsoleType.PYTHON, settingsProvider, setupFragment);
   }
 
@@ -120,6 +120,6 @@ public class PydevConsoleRunnerFactory extends PythonConsoleRunnerFactory {
                                                    PyConsoleType consoleType,
                                                    PyConsoleOptions.PyConsoleSettings settingsProvider,
                                                    String... setupFragment) {
-    return new PydevConsoleRunner(project, sdk, consoleType, workingDir, envs, settingsProvider, setupFragment);
+    return new PydevConsoleRunnerImpl(project, sdk, consoleType, workingDir, envs, settingsProvider, setupFragment);
   }
 }
