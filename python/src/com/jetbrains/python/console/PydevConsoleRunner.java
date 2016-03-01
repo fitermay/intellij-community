@@ -331,7 +331,7 @@ public class PydevConsoleRunner extends AbstractConsoleRunnerWithHistory<PythonC
   /**
    * Creates new console tab
    */
-  public void createNewConsole() {
+  private void createNewConsole() {
     run();
   }
 
@@ -607,7 +607,7 @@ public class PydevConsoleRunner extends AbstractConsoleRunnerWithHistory<PythonC
     connect(statements2execute);
   }
 
-  public void connect(final String[] statements2execute) {
+  private void connect(final String[] statements2execute) {
     if (handshake()) {
       ApplicationManager.getApplication().invokeLater(new Runnable() {
 
@@ -1107,7 +1107,5 @@ public class PydevConsoleRunner extends AbstractConsoleRunnerWithHistory<PythonC
     return session;
   }
 
-  public static PythonConsoleRunnerFactory factory() {
-    return new PydevConsoleRunnerFactory();
-  }
+
 }
