@@ -35,6 +35,7 @@ import com.intellij.util.ArrayUtil;
 import com.jetbrains.python.PythonHelpersLocator;
 import com.jetbrains.python.console.PyConsoleType;
 import com.jetbrains.python.console.PydevConsoleRunner;
+import com.jetbrains.python.console.PydevConsoleRunnerImpl;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -105,7 +106,7 @@ public class PythonScriptCommandLineState extends PythonCommandLineState {
   /**
    * @author traff
    */
-  public class PythonScriptWithConsoleRunner extends PydevConsoleRunner {
+  public class PythonScriptWithConsoleRunner extends PydevConsoleRunnerImpl {
 
     private CommandLinePatcher[] myPatchers;
 

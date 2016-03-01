@@ -134,8 +134,8 @@ public class PyConsoleTask extends PyExecutionFixtureTestTask {
 
     setProcessCanTerminate(false);
 
-    PydevConsoleRunner consoleRunner =
-      new PydevConsoleRunner(project, sdk, PyConsoleType.PYTHON, getWorkingFolder(), Maps.<String, String>newHashMap(), new String[]{}) {
+    PydevConsoleRunnerImpl consoleRunner =
+      new PydevConsoleRunnerImpl(project, sdk, PyConsoleType.PYTHON, getWorkingFolder(), Maps.<String, String>newHashMap(), new String[]{}) {
         @Override
         protected void showConsole(Executor defaultExecutor, @NotNull RunContentDescriptor contentDescriptor) {
           myContentDescriptorRef.set(contentDescriptor);
@@ -147,7 +147,7 @@ public class PyConsoleTask extends PyExecutionFixtureTestTask {
 
     myConsoleInitSemaphore = new Semaphore(0);
 
-    consoleRunner.addConsoleListener(new PydevConsoleRunner.ConsoleListener() {
+    consoleRunner.addConsoleListener(new PydevConsoleRunnerImpl.ConsoleListener() {
       @Override
       public void handleConsoleInitialized(LanguageConsoleView consoleView) {
         myConsoleInitSemaphore.release();

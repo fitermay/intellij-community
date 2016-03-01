@@ -114,9 +114,9 @@ public class PydevConsoleRunnerFactory extends PythonConsoleRunnerFactory {
   }
 
   protected PydevConsoleRunner createConsoleRunner(Project project,
-                                                   Sdk sdk,
-                                                   String workingDir,
-                                                   Map<String, String> envs, PyConsoleType consoleType, String ... setupFragment) {
-    return new PydevConsoleRunner(project, sdk, consoleType, workingDir, envs, setupFragment);
+                                                       Sdk sdk,
+                                                       String workingDir,
+                                                       Map<String, String> envs, PyConsoleType consoleType, String ... setupFragment) {
+    return new PydevConsoleRunnerImpl(project, sdk, consoleType, workingDir, envs, setupFragment);
   }
 }
