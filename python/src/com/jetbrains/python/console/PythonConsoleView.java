@@ -269,17 +269,20 @@ public class PythonConsoleView extends LanguageConsoleImpl implements Observable
   public void showVariables(PydevConsoleCommunication consoleCommunication) {
     PyStackFrame stackFrame = new PyStackFrame(getProject(), consoleCommunication, new PyStackFrameInfo("", "", "", null), null);
     final XStandaloneVariablesView view = new XStandaloneVariablesView(getProject(), new PyDebuggerEditorsProvider(), stackFrame);
+    mySplitView = view;
+
     consoleCommunication.addCommunicationListener(new ConsoleCommunicationListener() {
       @Override
       public void commandExecuted(boolean more) {
-        view.rebuildView();
+        if (mySplitView == view) {
+          view.rebuildView();
+        }
       }
 
       @Override
       public void inputRequested() {
       }
     });
-    mySplitView = view;
     Disposer.register(this, view);
     splitWindow();
   }
