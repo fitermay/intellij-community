@@ -446,7 +446,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     return "Console is not enabled.";
   }
 
-  protected void setEnabled(boolean flag) {
+  public void setEnabled(boolean flag) {
     myEnabled = flag;
   }
 
