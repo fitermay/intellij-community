@@ -63,7 +63,7 @@ public class PythonConsoleView extends LanguageConsoleImpl implements Observable
 
   private static final Logger LOG = Logger.getInstance(PythonConsoleView.class);
 
-  private PydevConsoleExecuteActionHandler myExecuteActionHandler;
+  private PythonConsoleExecuteActionHandler myExecuteActionHandler;
   private PyConsoleSourceHighlighter mySourceHighlighter;
   private boolean myIsIPythonOutput;
   private final PyHighlighter myPyHighlighter;
@@ -91,7 +91,7 @@ public class PythonConsoleView extends LanguageConsoleImpl implements Observable
     getFile().putCopyableUserData(PydevConsoleRunner.CONSOLE_KEY, communication);
   }
 
-  public void setExecutionHandler(@NotNull PydevConsoleExecuteActionHandler consoleExecuteActionHandler) {
+  public void setExecutionHandler(@NotNull PythonConsoleExecuteActionHandler consoleExecuteActionHandler) {
     myExecuteActionHandler = consoleExecuteActionHandler;
   }
 
