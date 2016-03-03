@@ -47,7 +47,7 @@ import java.awt.*;
 /**
  * @author traff
  */
-public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecuteActionHandler implements ConsoleCommunicationListener {
+public class PydevConsoleExecuteActionHandler extends PythonConsoleExecuteActionHandler implements ConsoleCommunicationListener {
   private final LanguageConsoleView myConsoleView;
 
   private String myInMultilineStringState = null;
@@ -73,6 +73,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     processLine(text, false);
   }
 
+  @Override
   public void processLine(@NotNull final String text, boolean execAnyway) {
     int indentBefore = myCurrentIndentSize;
     if (text.isEmpty()) {
@@ -307,10 +308,6 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     }
   }
 
-  public static String getPrevCommandRunningMessage() {
-    return "Previous command is still running. Please wait or press Ctrl+C in console to interrupt.";
-  }
-
   @Override
   public void commandExecuted(boolean more) {
     if (!more && !ipythonEnabled()) {
@@ -346,6 +343,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     //console.setPrompt(PyConsoleHighlightingUtil.ORDINARY_PROMPT);
   }
 
+  @Override
   public int getCurrentIndentSize() {
     return myCurrentIndentSize;
   }
@@ -368,6 +366,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     }
   }
 
+  @Override
   public int getPythonIndent() {
     return CodeStyleSettingsManager.getSettings(getProject()).getIndentSize(PythonFileType.INSTANCE);
   }
@@ -394,6 +393,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     return myConsoleView.getProject();
   }
 
+  @Override
   public String getCantExecuteMessage() {
     if (!isEnabled()) {
       return getConsoleIsNotEnabledMessage();
@@ -438,6 +438,7 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     super.runExecuteAction(console);
   }
 
+  @Override
   public boolean canExecuteNow() {
     return !myConsoleCommunication.isExecuting() || myConsoleCommunication.isWaitingForInput();
   }
@@ -446,14 +447,17 @@ public class PydevConsoleExecuteActionHandler extends ProcessBackedConsoleExecut
     return "Console is not enabled.";
   }
 
+  @Override
   public void setEnabled(boolean flag) {
     myEnabled = flag;
   }
 
+  @Override
   public boolean isEnabled() {
     return myEnabled;
   }
 
+  @Override
   public ConsoleCommunication getConsoleCommunication() {
     return myConsoleCommunication;
   }

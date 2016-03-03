@@ -110,7 +110,7 @@ public class PydevConsoleRunnerImpl extends PydevConsoleRunner {
   protected int[] myPorts;
   private PydevConsoleCommunication myPydevConsoleCommunication;
   private PyConsoleProcessHandler myProcessHandler;
-  protected PydevConsoleExecuteActionHandler myConsoleExecuteActionHandler;
+  protected PythonConsoleExecuteActionHandler myConsoleExecuteActionHandler;
   private List<ConsoleListener> myConsoleListeners = ContainerUtil.createLockFreeCopyOnWriteList();
   private final PyConsoleType myConsoleType;
   private Map<String, String> myEnvironmentVariables;
