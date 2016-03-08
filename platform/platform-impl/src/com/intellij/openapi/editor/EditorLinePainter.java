@@ -27,6 +27,8 @@ import java.util.Collection;
  */
 public abstract class EditorLinePainter {
   public static final ExtensionPointName<EditorLinePainter> EP_NAME = ExtensionPointName.create("com.intellij.editor.linePainter");
+  public static final ExtensionPointName<EditorLinePainter> PREFIX_EP_NAME = ExtensionPointName.create("com.intellij.editor.linePrefixPainter");
+
 
   public abstract Collection<LineExtensionInfo> getLineExtensions(@NotNull Project project, @NotNull VirtualFile file, int lineNumber);
 }
