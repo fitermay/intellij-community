@@ -179,4 +179,9 @@ public interface XDebugSession extends AbstractDebuggerSession {
   ConsoleView getConsoleView();
 
   RunnerLayoutUi getUI();
+
+
+  boolean isShowDebuggerOnBreakpoint();
+
+  void setShowDebuggerOnBreakpoint(boolean showDebuggerOnBreakpoint);
 }

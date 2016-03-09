@@ -118,6 +118,7 @@ public class XDebugSessionImpl implements XDebugSession {
   private final List<AnAction> myExtraStopActions = new SmartList<AnAction>();
   private final List<AnAction> myExtraActions = new SmartList<AnAction>();
   private ConsoleView myConsoleView;
+  private boolean isShowDebuggerOnBreakpoint = true;
   private final Icon myIcon;
 
   private volatile boolean breakpointsInitialized;
@@ -730,7 +731,7 @@ public class XDebugSessionImpl implements XDebugSession {
       @Override
       public void run() {
         if (mySessionTab != null) {
-          if (XDebuggerSettingsManager.getInstanceImpl().getGeneralSettings().isShowDebuggerOnBreakpoint()) {
+          if (XDebuggerSettingsManager.getInstanceImpl().getGeneralSettings().isShowDebuggerOnBreakpoint() && isShowDebuggerOnBreakpoint) {
             mySessionTab.toFront(true, new Runnable() {
               @Override
               public void run() {
@@ -1004,5 +1005,15 @@ public class XDebugSessionImpl implements XDebugSession {
 
   XExpression[] getWatchExpressions() {
     return myDebuggerManager.getWatchesManager().getWatches(getWatchesKey());
+  }
+
+  @Override
+  public boolean isShowDebuggerOnBreakpoint() {
+    return isShowDebuggerOnBreakpoint;
+  }
+
+  @Override
+  public void setShowDebuggerOnBreakpoint(boolean showDebuggerOnBreakpoint) {
+    isShowDebuggerOnBreakpoint = showDebuggerOnBreakpoint;
   }
 }
