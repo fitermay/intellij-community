@@ -678,7 +678,7 @@ class EditorGutterComponentImpl extends EditorGutterComponentEx implements Mouse
   private void calcAnnotationsSize() {
     myTextAnnotationGuttersSize = 0;
     final FontMetrics fontMetrics = myEditor.getFontMetrics(Font.PLAIN);
-    final int lineCount = myEditor.getDocument().getLineCount();
+    final int lineCount = Math.max(myEditor.getDocument().getLineCount(),1);
     for (int j = 0; j < myTextAnnotationGutters.size(); j++) {
       TextAnnotationGutterProvider gutterProvider = myTextAnnotationGutters.get(j);
       int gutterSize = 0;
