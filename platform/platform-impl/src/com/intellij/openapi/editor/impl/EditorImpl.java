@@ -1194,8 +1194,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
       px -= myPrefixWidthInPixels;
     }
 
-    px -= computePrefixText(line);
-
     int textLength = myDocument.getTextLength();
     LogicalPosition logicalPosition = visualToLogicalPosition(new VisualPosition(line, 0));
     int offset = logicalPositionToOffset(logicalPosition);
@@ -1575,10 +1573,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     if (startOffset == 0 && myPrefixText != null) {
       x += myPrefixWidthInPixels;
     }
-
-    int lineNumber = myDocument.getLineNumber(startOffset);
-    x += computePrefixText(lineNumber);
-
     if (targetColumn <= 0) return x;
 
     ++myTotalRequests;
@@ -2829,27 +2823,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     return myDocument.createLineIterator();
   }
 
-  private int computePrefixText(int lineNo)
-  {
-    VirtualFile file = getVirtualFile();
-    int width = 0;
-    if (myProject != null && file != null && !isOneLineMode()) {
-      for (EditorLinePainter painter : EditorLinePainter.PREFIX_EP_NAME.getExtensions()) {
-        Collection<LineExtensionInfo> extensions = painter.getLineExtensions(myProject, file, lineNo);
-        if (extensions != null && !extensions.isEmpty()) {
-          for (LineExtensionInfo info : extensions) {
-            final String prefixText = info.getText();
-            for (char c: prefixText.toCharArray())
-            {
-               width += EditorUtil.charWidth(c, info.getFontType(), this );
-            }
-
-          }
-        }
-      }
-    }
-    return width;
-  }
   private void paintText(@NotNull Graphics g,
                          @NotNull Rectangle clip,
                          @NotNull LogicalPosition clipStartPosition,
@@ -2899,29 +2872,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     context.update(chars, lIterator);
 
     while (!iterationState.atEnd() && !lIterator.atEnd()) {
-
-
-      if (position.x == 0)
-      {
-        FoldRegion collapsedFolderAt = myFoldingModel.getCollapsedRegionAtOffset(start);
-        if (collapsedFolderAt == null) {
-          final VirtualFile file = getVirtualFile();
-          if (myProject != null && file != null && !isOneLineMode()) {
-            for (EditorLinePainter painter : EditorLinePainter.PREFIX_EP_NAME.getExtensions()) {
-              Collection<LineExtensionInfo> extensions = painter.getLineExtensions(myProject, file, lIterator.getLineNumber());
-              if (extensions != null && !extensions.isEmpty()) {
-                for (LineExtensionInfo info : extensions) {
-                  final String prefixText = info.getText();
-                  position.x = drawString(g, prefixText, 0, prefixText.length(), position, clip, info.getEffectColor() == null ? effectColor : info.getEffectColor(),
-                                          info.getEffectType() == null ? effectType : info.getEffectType(), info.getFontType(),
-                                          info.getColor() == null ? currentColor : info.getColor(), context);
-                }
-              }
-            }
-          }
-        }
-      }
-
       int hEnd = iterationState.getEndOffset();
       int lEnd = lIterator.getEnd();
       if (hEnd >= lEnd) {
@@ -3789,9 +3739,7 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     if (pos.column == 0) return start;
     int end = myDocument.getLineEndOffset(pos.line);
 
-    int lineNumber = getDocument().getLineNumber(start);
-    int x = lineNumber == 0 ? getPrefixTextWidthInPixels() : 0;
-    x+= computePrefixText(lineNumber);
+    int x = getDocument().getLineNumber(start) == 0 ? getPrefixTextWidthInPixels() : 0;
 
     int result = EditorUtil.calcSoftWrapUnawareOffset(this, myDocument.getImmutableCharSequence(), start, end, pos.column,
                                                       EditorUtil.getTabSize(this), x, new int[]{0}, null);
