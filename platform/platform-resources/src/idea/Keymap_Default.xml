@@ -44,13 +44,13 @@
     <keyboard-shortcut first-keystroke="ESCAPE"/>
   </action>
   <action id="StepInto">
-    <keyboard-shortcut first-keystroke="F7"/>
+    <keyboard-shortcut first-keystroke="F5"/>
   </action>
   <action id="SmartStepInto">
-    <keyboard-shortcut first-keystroke="shift F7"/>
+    <keyboard-shortcut first-keystroke="shift F5"/>
   </action>
   <action id="ForceStepInto">
-    <keyboard-shortcut first-keystroke="alt shift F7"/>
+    <keyboard-shortcut first-keystroke="alt shift F5"/>
   </action>
   <action id="ForceStepOver">
     <keyboard-shortcut first-keystroke="alt shift F8"/>
@@ -426,7 +426,7 @@
     <keyboard-shortcut first-keystroke="control shift P"/>
   </action>
   <action id="ChangeSignature">
-    <keyboard-shortcut first-keystroke="control F6"/>
+    <keyboard-shortcut first-keystroke="control alt F6"/>
   </action>
   <action id="ChangeTypeSignature">
     <keyboard-shortcut first-keystroke="control shift F6"/>
@@ -536,10 +536,10 @@
     <keyboard-shortcut first-keystroke="shift F1"/>
   </action>
   <action id="StepOut">
-    <keyboard-shortcut first-keystroke="shift F8"/>
+    <keyboard-shortcut first-keystroke="control F5"/>
   </action>
   <action id="Resume">
-    <keyboard-shortcut first-keystroke="F9"/>
+    <keyboard-shortcut first-keystroke="control F6"/>
   </action>
   <action id="EditorDeleteLine">
     <keyboard-shortcut first-keystroke="control Y"/>
@@ -560,7 +560,7 @@
     <keyboard-shortcut first-keystroke="control shift TAB"/>
   </action>
   <action id="Move">
-    <keyboard-shortcut first-keystroke="F6"/>
+    <keyboard-shortcut first-keystroke="alt M"/>
   </action>
   <action id="MethodDown">
     <keyboard-shortcut first-keystroke="alt DOWN"/>
@@ -760,7 +760,7 @@
     <keyboard-shortcut first-keystroke="control alt N"/>
   </action>
   <action id="CopyElement">
-    <keyboard-shortcut first-keystroke="F5"/>
+    <keyboard-shortcut first-keystroke="alt F5"/>
   </action>
   <action id="ClassNameCompletion">
     <keyboard-shortcut first-keystroke="control alt SPACE"/>
@@ -769,7 +769,7 @@
     <keyboard-shortcut first-keystroke="F12"/>
   </action>
   <action id="StepOver">
-    <keyboard-shortcut first-keystroke="F8"/>
+    <keyboard-shortcut first-keystroke="F6"/>
   </action>
   <action id="$SelectAll">
     <keyboard-shortcut first-keystroke="control A"/>
