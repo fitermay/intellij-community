@@ -149,6 +149,8 @@ public class PythonConsoleToolWindow {
     content.setPreferredFocusableComponent(contentDescriptor.getComponent());
 
     content.putUserData(CONTENT_DESCRIPTOR, contentDescriptor);
+    contentDescriptor.setAttachedContent(content);
+
   }
 
   private static FocusListener createFocusListener(final ToolWindow toolWindow) {
