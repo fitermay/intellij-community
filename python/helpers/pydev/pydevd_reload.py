@@ -202,6 +202,7 @@ class Reload:
         try:
             # Get the module name, e.g. 'foo.bar.whatever'
             modname = mod.__name__
+            fqn_modname = modname
             # Get the module namespace (dict) early; this is part of the type check
             modns = mod.__dict__
             # Parse it into package name and module name, e.g. 'foo.bar' and 'whatever'
@@ -219,16 +220,31 @@ class Reload:
                 # Search the top-level module path
                 pkg = None
                 path = None  # Make find_module() uses the default search path
+
             # Find the module; may raise ImportError
-            (stream, filename, (suffix, mode, kind)) = imp.find_module(modname, path)
+
+            loader = getattr(mod, "__loader__", None) #PEP 302 support
+            stream = None
+            if not (hasattr(loader, 'get_source') or hasattr(loader, 'get_source')):
+                loader = None
+                (stream, filename, (suffix, mode, kind)) = imp.find_module(modname, path)
             # Turn it into a code object
             try:
                 # Is it Python source code or byte code read from a file?
-                if kind not in (imp.PY_COMPILED, imp.PY_SOURCE):
+                if loader:
+                    if hasattr(loader, 'get_code'):
+                        code = loader.get_code(fqn_modname) #PEP302 protocol uses the fully qualified name of the module
+                    elif hasattr(loader, 'get_source'):
+                        source = loader.get_source(fqn_modname)
+                        code = compile(source, filename, "exec")
+                    else:
+                        notify_error('Could not find source to reload (mod: %s)' % (modname,))
+                        return
+                elif kind not in (imp.PY_COMPILED, imp.PY_SOURCE):
                     # Fall back to built-in reload()
                     notify_error('Could not find source to reload (mod: %s)' % (modname,))
                     return
-                if kind == imp.PY_SOURCE:
+                elif kind == imp.PY_SOURCE:
                     source = stream.read()
                     code = compile(source, filename, "exec")
                 else:
