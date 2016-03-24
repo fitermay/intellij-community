@@ -104,12 +104,14 @@ from _pydevd_bundle import pydevd_dont_trace
 import sys
 import traceback
 import types
+import inspect
 
 NO_DEBUG = 0
 LEVEL1 = 1
 LEVEL2 = 2
 
 DEBUG = NO_DEBUG
+
 
 def write(*args):
     new_lst = []
@@ -119,6 +121,7 @@ def write(*args):
     msg = ' '.join(new_lst)
     sys.stdout.write('%s\n' % (msg,))
 
+
 def write_err(*args):
     new_lst = []
     for a in args:
@@ -127,25 +130,28 @@ def write_err(*args):
     msg = ' '.join(new_lst)
     sys.stderr.write('pydev debugger: %s\n' % (msg,))
 
+
 def notify_info0(*args):
     write_err(*args)
+
 
 def notify_info(*args):
     if DEBUG >= LEVEL1:
         write(*args)
 
+
 def notify_info2(*args):
     if DEBUG >= LEVEL2:
         write(*args)
+
 
 def notify_error(*args):
     write_err(*args)
 
 
-
-#=======================================================================================================================
+# =======================================================================================================================
 # code_objects_equal
-#=======================================================================================================================
+# =======================================================================================================================
 def code_objects_equal(code0, code1):
     for d in dir(code0):
         if d.startswith('_') or 'lineno' in d:
@@ -155,9 +161,9 @@ def code_objects_equal(code0, code1):
     return True
 
 
-#=======================================================================================================================
+# =======================================================================================================================
 # xreload
-#=======================================================================================================================
+# =======================================================================================================================
 def xreload(mod):
     """Reload a module in place, updating classes, methods and functions.
 
@@ -172,8 +178,10 @@ def xreload(mod):
     pydevd_dont_trace.clear_trace_filter_cache()
     return found_change
 
+
 try:
     import ctypes
+
     pythonapi = ctypes.pythonapi
 except:
     def try_copy_closure(old_func, new_func):
@@ -191,8 +199,10 @@ else:
                     return True
         return False
 
+
     def get_closure(func):
-        return getattr(func, "__closure__", getattr(func,"func_closure", None))
+        return getattr(func, "__closure__", getattr(func, "func_closure", None))
+
 
     def try_copy_closure(old_func, new_func):
         new_closure = get_closure(new_func)
@@ -200,13 +210,10 @@ else:
             return False
         old_closure = get_closure(old_func)
         if closure_changed(old_closure, new_closure):
-            pythonapi.PyFunction_SetClosure( ctypes.py_object(old_func), ctypes.py_object(new_closure))
+            pythonapi.PyFunction_SetClosure(ctypes.py_object(old_func), ctypes.py_object(new_closure))
             return True
         else:
             return False
-
-
-
 
 
 # This isn't actually used... Initially I planned to reload variables which are immutable on the
@@ -223,11 +230,10 @@ else:
 # immutable_types = tuple(immutable_types)
 
 
-#=======================================================================================================================
+# =======================================================================================================================
 # Reload
-#=======================================================================================================================
+# =======================================================================================================================
 class Reload:
-
     def __init__(self, mod):
         self.mod = mod
         self.found_change = False
@@ -259,7 +265,7 @@ class Reload:
 
             # Find the module; may raise ImportError
 
-            loader = getattr(mod, "__loader__", None) #PEP 302 support
+            loader = getattr(mod, "__loader__", None)  # PEP 302 support
             stream = None
             if not (hasattr(loader, 'get_source') or hasattr(loader, 'get_source')):
                 loader = None
@@ -269,7 +275,7 @@ class Reload:
                 # Is it Python source code or byte code read from a file?
                 if loader:
                     if hasattr(loader, 'get_code'):
-                        code = loader.get_code(fqn_modname) #PEP302 protocol uses the fully qualified name of the module
+                        code = loader.get_code(fqn_modname)  # PEP302 protocol uses the fully qualified name of the module
                     elif hasattr(loader, 'get_source'):
                         source = loader.get_source(fqn_modname)
                         code = compile(source, filename, "exec")
@@ -302,7 +308,6 @@ class Reload:
             # Now we get to the hard part
             oldnames = set(modns)
             newnames = set(new_namespace)
-
             # Create new tokens (note: not deleting existing)
             for name in newnames - oldnames:
                 notify_info0('Added:', name, 'to namespace')
@@ -321,7 +326,6 @@ class Reload:
         except:
             traceback.print_exc()
 
-
     def _handle_namespace(self, namespace, is_class_namespace=False):
         on_finish = None
         if is_class_namespace:
@@ -335,12 +339,9 @@ class Reload:
             self.found_change = True
             on_finish = lambda: xreload_after_update(namespace)
 
-
         if on_finish is not None:
             # If a client wants to know about it, give him a chance.
             self._on_finish_callbacks.append(on_finish)
-
-
 
     def _update(self, namespace, name, oldobj, newobj, is_class_namespace=False):
         """Update oldobj, if possible in place, with newobj.
@@ -378,8 +379,12 @@ class Reload:
                 self._update_staticmethod(oldobj, newobj)
                 return
 
+            if inspect.isdatadescriptor(newobj) or inspect.ismethoddescriptor(newobj):
+                self._update_descriptor(oldobj, newobj)
+                return
+
             if hasattr(types, 'ClassType'):
-                classtype = (types.ClassType, type) #object is not instance of types.ClassType.
+                classtype = (types.ClassType, type)  # object is not instance of types.ClassType.
             else:
                 classtype = type
 
@@ -407,14 +412,13 @@ class Reload:
                         xreload_old_new(namespace, name, oldobj, newobj)
                         self.found_change = True
 
-                    # Too much information to the user...
-                    # else:
-                    #     notify_info0('%s NOT updated. Create __xreload_old_new__(name, old, new) for custom reload' % (name,))
+                        # Too much information to the user...
+                        # else:
+                        #     notify_info0('%s NOT updated. Create __xreload_old_new__(name, old, new) for custom reload' % (name,))
 
         except:
             notify_error('Exception found when updating %s. Proceeding for other items.' % (name,))
             traceback.print_exc()
-
 
     # All of the following functions have the same signature as _update()
 
@@ -447,9 +451,7 @@ class Reload:
             notify_info0('Updated function closure:', oldfunc)
             self.found_change = True
 
-
         return oldfunc
-
 
     def _update_method(self, oldmeth, newmeth):
         """Update a method object."""
@@ -459,7 +461,6 @@ class Reload:
         elif hasattr(oldmeth, '__func__') and hasattr(newmeth, '__func__'):
             self._update(None, None, oldmeth.__func__, newmeth.__func__)
         return oldmeth
-
 
     def _update_class(self, oldclass, newclass):
         """Update a class object."""
@@ -489,7 +490,6 @@ class Reload:
 
         self._handle_namespace(oldclass, is_class_namespace=True)
 
-
     def _update_classmethod(self, oldcm, newcm):
         """Update a classmethod update."""
         # While we can't modify the classmethod object itself (it has no
@@ -499,7 +499,6 @@ class Reload:
         # __get__() but any object except None will do.
         self._update(None, None, oldcm.__get__(0), newcm.__get__(0))
 
-
     def _update_staticmethod(self, oldsm, newsm):
         """Update a staticmethod update."""
         # While we can't modify the staticmethod object itself (it has no
@@ -508,3 +507,21 @@ class Reload:
         # We don't have the class available to pass to __get__() but any
         # object except None will do.
         self._update(None, None, oldsm.__get__(0), newsm.__get__(0))
+
+    def _update_descriptor(self, oldobj, newobj):
+        """ Update the functions referenced by the descriptor"""
+        # use dir because often the attributes are not in __dict__ because it's some sort of native type
+        try:
+            oldnames = set(dir(oldobj))
+            newnames = set(dir(newobj))
+        except TypeError:  ##dir not supported
+            pass
+        for name in (oldnames & newnames) - set(['__dict__', '__doc__']):
+            try:
+                old_value = getattr(oldobj, name, None)
+                new_value = getattr(newobj, name, None)
+            except:  # lots of things can go wrong here
+                continue
+
+            if inspect.isfunction(old_value)  or inspect.ismethod(old_value):
+                self._update(oldobj, name, old_value, new_value)
