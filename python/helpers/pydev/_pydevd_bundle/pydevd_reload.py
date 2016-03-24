@@ -172,6 +172,42 @@ def xreload(mod):
     pydevd_dont_trace.clear_trace_filter_cache()
     return found_change
 
+try:
+    import ctypes
+    pythonapi = ctypes.pythonapi
+except:
+    def try_copy_closure(old_func, new_func):
+        return False
+else:
+    def closure_changed(oldcl, newcl):
+        old = oldcl is None and -1 or len(oldcl)
+        new = newcl is None and -1 or len(newcl)
+        if old != new:
+            return True
+        if old > 0 and new > 0:
+            for i in range(old):
+                same = oldcl[i] == newcl[i]
+                if not same:
+                    return True
+        return False
+
+    def get_closure(func):
+        return getattr(func, "__closure__", getattr(func,"func_closure", None))
+
+    def try_copy_closure(old_func, new_func):
+        new_closure = get_closure(new_func)
+        if not new_closure:
+            return False
+        old_closure = get_closure(old_func)
+        if closure_changed(old_closure, new_closure):
+            pythonapi.PyFunction_SetClosure( ctypes.py_object(old_func), ctypes.py_object(new_closure))
+            return True
+        else:
+            return False
+
+
+
+
 
 # This isn't actually used... Initially I planned to reload variables which are immutable on the
 # namespace, but this can destroy places where we're saving state, which may not be what we want,
@@ -406,6 +442,11 @@ class Reload:
             oldfunc.__defaults__ = newfunc.__defaults__
         except AttributeError:
             oldfunc.func_defaults = newfunc.func_defaults
+
+        if try_copy_closure(oldfunc, newfunc):
+            notify_info0('Updated function closure:', oldfunc)
+            self.found_change = True
+
 
         return oldfunc
 
