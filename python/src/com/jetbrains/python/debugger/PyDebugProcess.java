@@ -851,6 +851,8 @@ public class PyDebugProcess extends XDebugProcess implements IPyDebugProcess, Pr
   @Nullable
   @Override
   public XSourcePosition getSourcePositionForName(String name) {
+    if (name == null)
+      return null;
     XSourcePosition currentPosition = getCurrentFrameSourcePosition();
 
     final PsiFile file = getPsiFile(currentPosition);
@@ -868,12 +870,23 @@ public class PyDebugProcess extends XDebugProcess implements IPyDebugProcess, Pr
     PyResolveUtil.scopeCrawlUp(new PsiScopeProcessor() {
       @Override
       public boolean execute(@NotNull PsiElement element, @NotNull ResolveState state) {
-        if (!(element instanceof PyImportElement)) {
+        if ((element instanceof PyImportElement)) {
+          PyImportElement importElement = (PyImportElement)element;
+          if (name.equals(importElement.getVisibleName())) {
+            if (elementRef.isNull()) {
+              elementRef.set(element);
+            }
+            return false;
+
+          }
+          return true;
+        }
+        else {
           if (elementRef.isNull()) {
             elementRef.set(element);
           }
+          return false;
         }
-        return false;
       }
 
       @Nullable
