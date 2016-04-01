@@ -162,6 +162,8 @@ def frameVarsToXML(frame_f_locals):
 
     return xml
 
+def get_type_qualifier(type):
+    return getattr(type, "__module__", "")
 
 def varToXML(val, name, doTrim=True, additionalInXml=''):
     """ single variable or dictionary to xml representation """
@@ -174,6 +176,7 @@ def varToXML(val, name, doTrim=True, additionalInXml=''):
         v = val
 
     type, typeName, resolver = getType(v)
+    typeQualifier = get_type_qualifier(type)
 
     try:
         if hasattr(v, '__class__'):
@@ -205,7 +208,7 @@ def varToXML(val, name, doTrim=True, additionalInXml=''):
         name = quote(name, '/>_= ') #TODO: Fix PY-5834 without using quote
     except:
         pass
-    xml = '<var name="%s" type="%s"' % (makeValidXmlValue(name), makeValidXmlValue(typeName))
+    xml = '<var name="%s" type="%s" qualifier="%s"' % (makeValidXmlValue(name), makeValidXmlValue(typeName), makeValidXmlValue(typeQualifier))
 
     if value:
         #cannot be too big... communication may not handle it.
