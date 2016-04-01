@@ -59,8 +59,10 @@ import com.jetbrains.python.PythonFileType;
 import com.jetbrains.python.console.PythonDebugLanguageConsoleView;
 import com.jetbrains.python.console.pydev.PydevCompletionVariant;
 import com.jetbrains.python.debugger.pydev.*;
+import com.jetbrains.python.psi.PyClass;
 import com.jetbrains.python.psi.PyFunction;
 import com.jetbrains.python.psi.PyImportElement;
+import com.jetbrains.python.psi.PyPsiFacade;
 import com.jetbrains.python.psi.resolve.PyResolveUtil;
 import com.jetbrains.python.psi.types.PyClassType;
 import com.jetbrains.python.psi.types.PyType;
@@ -925,10 +927,20 @@ public class PyDebugProcess extends XDebugProcess implements IPyDebugProcess, Pr
     if (file == null) return null;
 
 
-    PyType type = PyTypeParser.getTypeByName(file, typeName);
 
-    if (type instanceof PyClassType) {
-      return XSourcePositionImpl.createByElement(((PyClassType)type).getPyClass());
+    if (!typeName.contains(".")) {
+      PyType type = PyTypeParser.getTypeByName(file, typeName);
+
+      if (type instanceof PyClassType) {
+        return XSourcePositionImpl.createByElement(((PyClassType)type).getPyClass());
+      }
+    }
+
+    PyPsiFacade psiFacade = PyPsiFacade.getInstance(getProject());
+    PyClass aClass = psiFacade.findClass(typeName);
+    if (aClass != null)
+    {
+      return XSourcePositionImpl.createByElement(aClass);
     }
 
     return null;
