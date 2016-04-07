@@ -112,7 +112,6 @@ LEVEL2 = 2
 
 DEBUG = NO_DEBUG
 
-
 def write(*args):
     new_lst = []
     for a in args:
@@ -120,7 +119,6 @@ def write(*args):
 
     msg = ' '.join(new_lst)
     sys.stdout.write('%s\n' % (msg,))
-
 
 def write_err(*args):
     new_lst = []
@@ -130,28 +128,25 @@ def write_err(*args):
     msg = ' '.join(new_lst)
     sys.stderr.write('pydev debugger: %s\n' % (msg,))
 
-
 def notify_info0(*args):
     write_err(*args)
-
 
 def notify_info(*args):
     if DEBUG >= LEVEL1:
         write(*args)
 
-
 def notify_info2(*args):
     if DEBUG >= LEVEL2:
         write(*args)
-
 
 def notify_error(*args):
     write_err(*args)
 
 
-# =======================================================================================================================
+
+#=======================================================================================================================
 # code_objects_equal
-# =======================================================================================================================
+#=======================================================================================================================
 def code_objects_equal(code0, code1):
     for d in dir(code0):
         if d.startswith('_') or 'lineno' in d:
@@ -161,9 +156,9 @@ def code_objects_equal(code0, code1):
     return True
 
 
-# =======================================================================================================================
+#=======================================================================================================================
 # xreload
-# =======================================================================================================================
+#=======================================================================================================================
 def xreload(mod):
     """Reload a module in place, updating classes, methods and functions.
 
@@ -308,6 +303,7 @@ class Reload:
             # Now we get to the hard part
             oldnames = set(modns)
             newnames = set(new_namespace)
+
             # Create new tokens (note: not deleting existing)
             for name in newnames - oldnames:
                 notify_info0('Added:', name, 'to namespace')
@@ -326,6 +322,7 @@ class Reload:
         except:
             traceback.print_exc()
 
+
     def _handle_namespace(self, namespace, is_class_namespace=False):
         on_finish = None
         if is_class_namespace:
@@ -339,9 +336,12 @@ class Reload:
             self.found_change = True
             on_finish = lambda: xreload_after_update(namespace)
 
+
         if on_finish is not None:
             # If a client wants to know about it, give him a chance.
             self._on_finish_callbacks.append(on_finish)
+
+
 
     def _update(self, namespace, name, oldobj, newobj, is_class_namespace=False):
         """Update oldobj, if possible in place, with newobj.
