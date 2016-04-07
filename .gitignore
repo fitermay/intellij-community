@@ -8,8 +8,8 @@
 .DS_Store
 /test-system
 /test-config
-python/quartz/
 python/quartz-plugin/
 python/python-skeletons/
+python/quartz/
 python/ficc-bridge/
 *.pyc
