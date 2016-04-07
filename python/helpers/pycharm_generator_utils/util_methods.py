@@ -1,5 +1,5 @@
 from pycharm_generator_utils.constants import *
-
+from pycharm_generator_utils.clr_tools import get_clr_type, is_clr_type, IS_CLR, IS_PYTHON_DOT_NET
 try:
     import inspect
 except ImportError:
@@ -207,7 +207,15 @@ def sorted_no_case(p_array):
     p_array = sorted(p_array, key=lambda x: x.upper())
     return p_array
 
+#needed for python.net identifiers
+def clean_class_name(class_name):
+    """
 
+    :param class_name:
+    :type class_name: str
+    :return:
+    """
+    return class_name.replace("`","_")
 def cleanup(value):
     result = []
     prev = i = 0
@@ -241,6 +249,13 @@ try:
     _prop_types.append(types.MemberDescriptorType)
 except:
     pass
+
+if IS_PYTHON_DOT_NET:
+    try:
+        import System
+        _prop_types.append(type(System.String.__dict__["Length"]))
+    except:
+        pass
 
 _prop_types = tuple(_prop_types)
 
@@ -313,7 +328,7 @@ def say(msg, *data):
 
 def transform_seq(results, toplevel=True):
     """Transforms a tree of ParseResults into a param spec string."""
-    is_clr = sys.platform == "cli"
+    is_clr = IS_CLR
     ret = [] # add here token to join
     for token in results:
         token_type = token[0]
@@ -355,7 +370,7 @@ def transform_optional_seq(results):
     """
     assert results[0] is T_OPTIONAL, "transform_optional_seq expects a T_OPTIONAL node, sees " + \
                                      repr(results[0])
-    is_clr = sys.platform == "cli"
+    is_clr = IS_CLR and not IS_PYTHON_DOT_NET
     ret = []
     for token in results[1:]:
         token_type = token[0]
@@ -589,7 +604,7 @@ def note(msg, *data):
 
 ##############  plaform-specific methods    #######################################################
 import sys
-if sys.platform == 'cli':
+if IS_CLR:
     #noinspection PyUnresolvedReferences
     import clr
 
@@ -602,44 +617,65 @@ def print_profile():
     for pd in data:
         say('%s\t%d\t%d\t%d', pd.Name, pd.InclusiveTime, pd.ExclusiveTime, pd.Calls)
 
-def is_clr_type(clr_type):
-    if not clr_type: return False
-    try:
-        clr.GetClrType(clr_type)
-        return True
-    except TypeError:
-        return False
+
+def convert_clr_type_for_docstring(clr_type):
+    if clr_type.IsArray:
+        inner = convert_clr_type_for_docstring(clr_type.GetElementType())
+        if not inner:
+            return None
+        return "list[" + inner + "]"
+    elif clr_type.IsGenericParameter:
+        return "T" # We can probably do better than this...
+    else:
+        #Use the name twice because otherwise pycharm gets confused with docstring
+        namespace = clr_type.Namespace
+        if not namespace:
+            namespace = ""
+        mod_name = namespace + "." + clean_class_name(clr_type.Name) + "." + clean_class_name(clr_type.Name)
+        return clean_class_name(mod_name)
 
 def restore_clr(p_name, p_class):
     """
     Restore the function signature by the CLR type signature
-    :return (is_static, spec, sig_note)
+    :return (is_static, spec, return_type, sig_note)
     """
-    clr_type = clr.GetClrType(p_class)
+    clr_type = get_clr_type(p_class)
     if p_name == '__new__':
         methods = [c for c in clr_type.GetConstructors()]
         if not methods:
-            return False, p_name + '(self, *args)', 'cannot find CLR constructor' # "self" is always first argument of any non-static method
+            return False, p_name + '(self, *args)', None, 'cannot find CLR constructor' # "self" is always first argument of any non-static method
     else:
         methods = [m for m in clr_type.GetMethods() if m.Name == p_name]
         if not methods:
             bases = p_class.__bases__
             if len(bases) == 1 and p_name in dir(bases[0]):
                 # skip inherited methods
-                return False, None, None
-            return False, p_name + '(self, *args)', 'cannot find CLR method'
+                return False, None, None, None
+            return False, p_name + '(self, *args)',  None, 'cannot find CLR method'
             # "self" is always first argument of any non-static method
 
     parameter_lists = []
     for m in methods:
         parameter_lists.append([p.Name for p in m.GetParameters()])
+
+    return_type = None
+    if p_name != '__new__':
+        return_types = set()
+        for m in methods:
+            type_docstring = convert_clr_type_for_docstring(m.ReturnType)
+            if type_docstring:
+                return_types.add(type_docstring)
+        if return_types:
+            return_type = "|".join(return_types)
     params = restore_parameters_for_overloads(parameter_lists)
     is_static = False
     if not methods[0].IsStatic:
         params = ['self'] + params
     else:
         is_static = True
-    return is_static, build_signature(p_name, params), None
+
+
+    return is_static, build_signature(p_name, params),return_type, None
 
 def build_output_name(dirname, qualified_name):
     qualifiers = qualified_name.split(".")

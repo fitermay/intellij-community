@@ -36,6 +36,7 @@ import com.intellij.util.SystemProperties;
 import com.intellij.util.containers.HashMap;
 import com.jetbrains.python.packaging.PyPackageUtil;
 import com.jetbrains.python.packaging.PyRequirement;
+import com.jetbrains.python.sdk.flavors.PythonSdkFlavor;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -125,9 +126,13 @@ public class PySdkUtil {
     final Map<String, String> systemEnv = System.getenv();
     final Map<String, String> env = extraEnv != null ? mergeEnvVariables(systemEnv, extraEnv) : systemEnv;
     try {
-
-      GeneralCommandLine commandLine = cmd.withWorkDirectory(homePath).withEnvironment(env);
-      final CapturingProcessHandler processHandler = new CapturingProcessHandler(commandLine);
+      final GeneralCommandLine cmdLine = cmd.withWorkDirectory(homePath).withEnvironment(env);
+      final PythonSdkFlavor flavor = PythonSdkFlavor.getFlavor(cmdLine.getExePath());
+      if (flavor != null)
+      {
+        flavor.patchHelperCommandLine(cmdLine);
+      }
+      final CapturingProcessHandler processHandler = new CapturingProcessHandler(cmdLine);
       if (stdin != null) {
         final OutputStream processInput = processHandler.getProcessInput();
         assert processInput != null;

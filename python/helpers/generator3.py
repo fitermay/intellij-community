@@ -110,7 +110,7 @@ def walk_python_path(path):
         yield root, [f for f in files if os.path.exists(os.path.join(root, f))]
 
 
-def list_binaries(paths):
+def list_binaries(paths, include_dot_net_assemblies = False):
     """
     Finds binaries in the given list of paths.
     Understands nested paths, as sys.paths have it (both "a/b" and "a/b/c").
@@ -151,6 +151,19 @@ def list_binaries(paths):
                     file_path = os.path.join(root, f)
 
                     res[the_name.upper()] = (the_name, file_path, os.path.getsize(file_path), int(os.stat(file_path).st_mtime))
+    if IS_PYTHON_DOT_NET and include_dot_net_assemblies: ## only tested for Python.NET right now
+        import clr
+        allAssemblies = list(clr.ListAssemblies(False))
+        for assembly_name in allAssemblies:
+            assembly_name = str(assembly_name)
+            assembly_path = clr.FindAssembly(assembly_name)
+            if not assembly_path:
+                continue
+            assembly_path = str(assembly_path)
+            namespaces = get_assembly_namespaces(assembly_name, assembly_path)
+            for namespace in namespaces:
+                res[namespace] = (namespace, assembly_path, os.path.getsize(assembly_path), int(os.stat(assembly_path).st_mtime))
+
     return list(res.values())
 
 
@@ -327,7 +340,15 @@ def process_one(name, mod_file_name, doing_builtins, subdir):
         return False
     return True
 
-
+def process_assembly(name, mod_file_name, subdir):
+    namespaces = get_assembly_namespaces(name, mod_file_name)
+    for namespace in namespaces:
+        if not namespace:
+            continue
+        if namespace == 'None':
+            continue
+        process_one(namespace, mod_file_name, False, subdir)
+    return True
 def get_help_text():
     return (
         #01234567890123456789012345678901234567890123456789012345678901234567890123456789
@@ -356,6 +377,7 @@ def get_help_text():
         ' -L -- print version and then a list of binary module files found ' '\n'
         '    on sys.path and in directories in directory_list;' '\n'
         '    lines are "qualified.module.name /full/path/to/module_file.{pyd,dll,so}"' '\n'
+        ' -N same as L but tries to include .NET assemblies as well'           '\n'
         ' -S -- lists all python sources found in sys.path and in directories in directory_list\n'
         ' -z archive_name -- zip files to archive_name. Accepts files to be archived from stdin in format <filepath> <name in archive>'
     )
@@ -376,8 +398,8 @@ if __name__ == "__main__":
         say(helptext)
         sys.exit(0)
 
-    if '-L' not in opts and '-b' not in opts and '-S' not in opts and not args:
-        report("Neither -L nor -b nor -S nor any module name given")
+    if '-L' not in opts  and '-N' not in opts and '-b' not in opts and '-S' not in opts and not args:
+        report("Neither -L  nor -N nor -b nor -S nor any module name given")
         sys.exit(1)
 
     if "-x" in opts:
@@ -399,6 +421,16 @@ if __name__ == "__main__":
             sys.exit(1)
         say(VERSION)
         results = list(list_binaries(sys.path))
+        results.sort()
+        for name, path, size, last_modified in results:
+            say("%s\t%s\t%d\t%d", name, path, size, last_modified)
+        sys.exit(0)
+    if "-N" in opts:
+        if len(args) > 0:
+            report("Expected no args with -N, got %d args", len(args))
+            sys.exit(1)
+        say(VERSION)
+        results = list(list_binaries(sys.path, include_dot_net_assemblies= True))
         results.sort()
         for name, path, size, last_modified in results:
             say("%s\t%s\t%d\t%d", name, path, size, last_modified)
@@ -461,8 +493,10 @@ if __name__ == "__main__":
 
             # We take module name from import statement
             name = get_namespace_by_name(name)
-
-        if not process_one(name, mod_file_name, False, subdir):
+        if IS_PYTHON_DOT_NET and mod_file_name and is_clr_assembly(name):
+            if not process_assembly(name, mod_file_name, subdir):
+                sys.exit(1)
+        elif not process_one(name, mod_file_name, False, subdir):
             sys.exit(1)
 
     say("Generation completed in %d ms", timer.elapsed())

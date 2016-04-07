@@ -19,6 +19,7 @@ import com.google.common.collect.Lists;
 import com.intellij.execution.configurations.GeneralCommandLine;
 import com.intellij.execution.process.ProcessOutput;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.extensions.Extensions;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.openapi.projectRoots.SdkAdditionalData;
@@ -82,6 +83,7 @@ public abstract class PythonSdkFlavor {
 
     if (SystemInfo.isWindows) {
       result.add(WinPythonSdkFlavor.INSTANCE);
+
     }
     else if (SystemInfo.isMac) {
       result.add(MacPythonSdkFlavor.INSTANCE);
@@ -90,8 +92,13 @@ public abstract class PythonSdkFlavor {
       result.add(UnixPythonSdkFlavor.INSTANCE);
     }
 
+    for (PySdkFlavorProvider pySdkFlavorProvider : Extensions.getExtensions(PySdkFlavorProvider.EP_NAME)) {
+      pySdkFlavorProvider.addPlatformSpecificSdkFlavors(result);
+    }
+
     if (addPlatformIndependent)
       result.addAll(getPlatformIndependentFlavors());
+
 
     return result;
   }
@@ -105,6 +112,10 @@ public abstract class PythonSdkFlavor {
     result.add(VirtualEnvSdkFlavor.INSTANCE);
     result.add(PyRemoteSdkFlavor.INSTANCE);
     result.add(MayaSdkFlavor.INSTANCE);
+    for (PySdkFlavorProvider pySdkFlavorProvider : Extensions.getExtensions(PySdkFlavorProvider.EP_NAME)) {
+      pySdkFlavorProvider.addPlatformIndependentSdkFlavors(result);
+    }
+
 
     return result;
   }
@@ -233,6 +244,11 @@ public abstract class PythonSdkFlavor {
   public void initPythonPath(Collection<String> path, Map<String, String> env) {
     path = appendSystemPythonPath(path);
     addToEnv(PythonEnvUtil.PYTHONPATH, StringUtil.join(path, File.pathSeparator), env);
+  }
+
+  public void patchHelperCommandLine(GeneralCommandLine cmd)
+  {
+
   }
 
   public VirtualFile getSdkPath(VirtualFile path) {

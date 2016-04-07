@@ -2,7 +2,7 @@ import keyword
 
 from pycharm_generator_utils.util_methods import *
 from pycharm_generator_utils.constants import *
-
+from clr_tools import IS_CLR, IS_PYTHON_DOT_NET
 
 class emptylistdict(dict):
     """defaultdict not available before 2.5; simplest reimplementation using [] as default"""
@@ -221,7 +221,7 @@ class ModuleRedeclarator(object):
         if isinstance(p_value, SIMPLEST_TYPES):
             out(indent, prefix, reliable_repr(p_value), postfix)
         else:
-            if sys.platform == "cli":
+            if IS_CLR and not IS_PYTHON_DOT_NET:
                 imported_name = None
             else:
                 imported_name = self.find_imported_name(p_value)
@@ -284,7 +284,7 @@ class ModuleRedeclarator(object):
                         out(indent, "}", postfix)
                 else: # something else, maybe representable
                     # look up this value in the module.
-                    if sys.platform == "cli":
+                    if IS_CLR and not IS_PYTHON_DOT_NET:
                         out(indent, prefix, "None", postfix)
                         return
                     found_name = ""
@@ -505,6 +505,7 @@ class ModuleRedeclarator(object):
         mod_class_method_tuple = (p_modname, classname, p_name)
         ret_literal = None
         is_init = False
+
         # any decorators?
         action("redoing decos of func %r of class %r", p_name, p_class)
         if self.doing_builtins and p_modname == BUILTIN_MOD_NAME:
@@ -533,8 +534,9 @@ class ModuleRedeclarator(object):
             spec, sig_note = restore_predefined_builtin(classname, p_name)
             out(indent, "def ", spec, ": # ", sig_note)
             out_doc_attr(out, p_func, indent + 1, p_class)
-        elif sys.platform == 'cli' and is_clr_type(p_class):
-            is_static, spec, sig_note = restore_clr(p_name, p_class)
+        elif IS_CLR and is_clr_type(p_class):
+            is_static, spec, return_type, sig_note = restore_clr(p_name, p_class)
+
             if is_static:
                 out(indent, "@staticmethod")
             if not spec: return
@@ -542,6 +544,10 @@ class ModuleRedeclarator(object):
                 out(indent, "def ", spec, ": #", sig_note)
             else:
                 out(indent, "def ", spec, ":")
+            if return_type:
+                out(indent + 1, '""":rtype: ', return_type, '"""')
+                out(0, "")
+
             if not p_name in ['__gt__', '__ge__', '__lt__', '__le__', '__ne__', '__reduce_ex__', '__str__']:
                 out_doc_attr(out, p_func, indent + 1, p_class)
         elif mod_class_method_tuple in PREDEFINED_MOD_CLASS_SIGS:
@@ -633,7 +639,8 @@ class ModuleRedeclarator(object):
                     skipped_bases.append(str(base))
                     continue
                     # somehow import every base class
-                base_name = base.__name__
+                base_name = clean_class_name(base.__name__)
+
                 qual_module_name = qualifier_of(base, skip_qualifiers)
                 got_existing_import = False
                 if qual_module_name:
@@ -683,7 +690,7 @@ class ModuleRedeclarator(object):
             else:
                 try:
                     item = getattr(p_class, item_name) # let getters do the magic
-                except AttributeError:
+                except (AttributeError, TypeError):
                     item = field_source[item_name] # have it raw
                 except Exception:
                     continue
@@ -742,6 +749,14 @@ class ModuleRedeclarator(object):
                     else:
                         out(indent + 1, '""":type: ', prop_type, '"""')
                     out(0, "")
+            elif IS_CLR and is_clr_type(p_class):
+                has_setter = "set_" + item_name in methods
+                has_getter = "get_" + item_name in methods
+                getter_name =  "get_" + item_name if has_getter else 'None'
+                setter_name =  "set_" + item_name if has_setter else 'None'
+
+                out(indent + 1, item_name, " = property(%s, %s)  # default" % (getter_name, setter_name) )
+                out(0, "")
             else:
                 out(indent + 1, item_name, " = property(lambda self: object(), lambda self, v: None, lambda self: None)  # default")
                 if prop_docstring:
@@ -795,12 +810,16 @@ class ModuleRedeclarator(object):
 
     def redo_imports(self):
         module_type = type(sys)
+        clr_module_type = type(sys)
+        # if IS_CLR:
+        #     from System import String
+        #     clr_module_type = type(String)
         for item_name in self.module.__dict__.keys():
             try:
                 item = self.module.__dict__[item_name]
             except:
                 continue
-            if type(item) is module_type: # not isinstance, py2.7 + PyQt4.QtCore on windows have a bug here
+            if type(item) is module_type or type(item) is clr_module_type: # not isinstance, py2.7 + PyQt4.QtCore on windows have a bug here
                 self.imported_modules[item_name] = item
                 self.add_import_header_if_needed()
                 ref_notice = getattr(item, "__file__", str(item))
@@ -846,6 +865,14 @@ class ModuleRedeclarator(object):
         funcs = {}
         classes = {}
         module_dict = self.module.__dict__
+
+        ##PYTHON.NET has weird names for delegate types so delete them
+        if IS_PYTHON_DOT_NET and str(type(self.module)) == "<class 'CLR.ModuleObject'>":
+              dictcopy = {}
+              for key,value in self.module.__dict__.iteritems():
+                dictcopy[key.replace("`","_")] = value
+              module_dict = dictcopy
+
         if inspect_dir:
             module_dict = dir(self.module)
         for item_name in module_dict:
@@ -866,7 +893,7 @@ class ModuleRedeclarator(object):
             # unless we're adamantly positive that the name was imported, we assume it is defined here
             mod_name = None # module from which p_name might have been imported
             # IronPython has non-trivial reexports in System module, but not in others:
-            skip_modname = sys.platform == "cli" and p_name != "System"
+            skip_modname = (IS_CLR and not IS_PYTHON_DOT_NET) and not p_name != "System"
             surely_not_imported_mods = KNOWN_FAKE_REEXPORTERS.get(p_name, ())
             ## can't figure weirdness in some modules, assume no reexports:
             #skip_modname =  skip_modname or p_name in self.KNOWN_FAKE_REEXPORTERS
@@ -989,7 +1016,9 @@ class ModuleRedeclarator(object):
                         ins_index = i # we could not go farther than current ins_index
                         break         # ...and need not go fartehr than first known child
                 cls_list.insert(ins_index, (cls_name, get_mro(cls)))
-            self.split_modules = self.mod_filename and len(cls_list) >= 30
+
+            is_py_dot_net_module = str(type(self.module)) == "<class 'CLR.ModuleObject'>"
+            self.split_modules = (self.mod_filename and len(cls_list) >= 30 or is_py_dot_net_module) and not self.doing_builtins #always split for py.NET so not to confuse the IDE for type string
             for item_name in [cls_item[0] for cls_item in cls_list]:
                 buf = ClassBuf(item_name, self)
                 self.classes_buffs.append(buf)

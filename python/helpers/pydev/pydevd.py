@@ -868,8 +868,9 @@ class PyDB:
                     return meth(mod_name)
         return None
 
-    def run(self, file, globals=None, locals=None, module=False, set_trace=True):
-        if module:
+    def run(self, file, globals=None, locals=None, module=False, set_trace=True, custom_entry_point = None):
+        run_as_import = custom_entry_point and module
+        if module and not run_as_import:
             filename = self.get_fullname(file)
             if filename is None:
                 sys.stderr.write("No module named %s\n" % file)
@@ -912,7 +913,8 @@ class PyDB:
             # sys.path.insert(0, os.getcwd())
             # Changed: it's not the local directory, but the directory of the file launched
             # The file being run ust be in the pythonpath (even if it was not before)
-            sys.path.insert(0, os.path.split(file)[0])
+            if not run_as_import:
+                sys.path.insert(0, os.path.split(file)[0])
 
             self.prepare_to_run()
 
@@ -934,8 +936,12 @@ class PyDB:
         except:
             sys.stderr.write("Matplotlib support in debugger failed\n")
             traceback.print_exc()
-
-        pydev_imports.execfile(file, globals, locals)  # execute the script
+        if not run_as_import:
+            pydev_imports.execfile(file, globals, locals)  # execute the script
+        else:
+            mod = __import__(file, level=0, fromlist=[custom_entry_point], globals = globals, locals= locals )
+            func = getattr(mod, custom_entry_point)
+            func()
 
     def exiting(self):
         sys.stdout.flush()
@@ -990,6 +996,7 @@ def process_command_line(argv):
     setup['print-in-debugger-startup'] = False
     setup['cmd-line'] = False
     setup['module'] = False
+    setup['custom_entry_point'] = None
     i = 0
     del argv[0]
     while (i < len(argv)):
@@ -1008,6 +1015,10 @@ def process_command_line(argv):
         elif argv[i] == '--server':
             del argv[i]
             setup['server'] = True
+        elif argv[i] == '--custom_entry_point':
+            del argv[i]
+            setup['custom_entry_point'] = argv[i]
+            del argv[i]
         elif argv[i] == '--file':
             del argv[i]
             setup['file'] = argv[i]
@@ -1369,6 +1380,7 @@ if __name__ == '__main__':
         setup = process_command_line(sys.argv)
         SetupHolder.setup = setup
     except ValueError:
+        print sys.original_argv
         traceback.print_exc()
         usage(1)
 
@@ -1502,7 +1514,7 @@ if __name__ == '__main__':
         sys.argv.insert(4, '--max_module_instances=1')
 
         # Run the dev_appserver
-        debugger.run(setup['file'], None, None, is_module, set_trace=False)
+        debugger.run(setup['file'], None, None, is_module, set_trace=False, custom_entry_point=setup['custom_entry_point'])
     else:
         if setup['save-signatures']:
             if pydevd_vm_type.get_vm_type() == pydevd_vm_type.PydevdVmType.JYTHON:
@@ -1528,7 +1540,7 @@ if __name__ == '__main__':
 
         connected = True  # Mark that we're connected when started from inside ide.
 
-        globals = debugger.run(setup['file'], None, None, is_module)
+        globals = debugger.run(setup['file'], None, None, is_module, custom_entry_point=setup['custom_entry_point'])
 
         if setup['cmd-line']:
             debugger.wait_for_commands(globals)

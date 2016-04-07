@@ -204,9 +204,7 @@ public class GenerateBinaryStubsFix implements LocalQuickFix {
   }
 
   private List<String> collectAssemblyReferences(PsiFile file) {
-    if (!(PythonSdkFlavor.getFlavor(mySdk) instanceof IronPythonSdkFlavor)) {
-      return Collections.emptyList();
-    }
+
     final List<String> result = new ArrayList<String>();
     file.accept(new PyRecursiveElementVisitor() {
       @Override
@@ -243,6 +241,8 @@ public class GenerateBinaryStubsFix implements LocalQuickFix {
     if (flavor instanceof IronPythonSdkFlavor) {
       return true;
     }
+
+
     return isGtk(importStatementBase);
   }
 
