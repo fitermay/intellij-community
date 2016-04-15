@@ -98,10 +98,13 @@ public abstract class AbstractConsoleRunnerWithHistory<T extends LanguageConsole
 
     ProcessTerminatedListener.attach(myProcessHandler);
 
+    final LanguageConsoleView currentView = myConsoleView;
     myProcessHandler.addProcessListener(new ProcessAdapter() {
       @Override
       public void processTerminated(ProcessEvent event) {
-        finishConsole();
+        if (!currentView.getConsoleEditor().isDisposed()) {
+          currentView.setEditable(false);
+        }
       }
     });
 
