@@ -180,9 +180,7 @@ public class FileWatcher {
 
     @Override
     public void notifyManualWatchRoots(@NotNull Collection<String> roots) {
-      if (!roots.isEmpty()) {
-        myManualWatchRoots.add(ContainerUtil.newHashSet(roots));
-      }
+      myManualWatchRoots.add(roots.isEmpty() ? Collections.emptySet() : ContainerUtil.newHashSet(roots));
       notifyOnAnyEvent();
     }
 

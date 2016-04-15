@@ -1156,7 +1156,7 @@ public class InferenceSession {
         type =  PsiType.getJavaLangRuntimeException(myManager, GlobalSearchScope.allScope(myManager.getProject()));
       }
       else {
-        type = upperBound;
+        type = myErased ? null : upperBound;
       }
 
       if (type instanceof PsiIntersectionType) {
@@ -1298,6 +1298,9 @@ public class InferenceSession {
   }
 
   public GlobalSearchScope getScope() {
+    if (myContext != null) {
+      return myContext.getResolveScope();
+    }
     return GlobalSearchScope.allScope(myManager.getProject());
   }
 
