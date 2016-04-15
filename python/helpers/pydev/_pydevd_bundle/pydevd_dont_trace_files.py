@@ -19,6 +19,7 @@ DONT_TRACE = {
     'threading.py':LIB_FILE,
 
     #things from pydev that we don't want to trace
+    'pydevd_file_utils_quartz.py' : PYDEV_FILE,
     '_pydev_execfile.py':PYDEV_FILE,
     '_pydev_BaseHTTPServer.py': PYDEV_FILE,
     '_pydev_Queue.py': PYDEV_FILE,
