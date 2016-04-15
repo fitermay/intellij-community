@@ -1,5 +1,5 @@
 from _pydevd_bundle.pydevd_constants import USE_LIB_COPY, izip
-
+import sys
 
 try:
     try:
@@ -38,13 +38,17 @@ try:
 except NameError:
     from _pydev_imps._pydev_execfile import execfile
 
-
+py_version = sys.version_info[0:3]
+# Python 2.6 queue implementation contains a deadlock when called while holding a lock
+# (since it aquires and import lock, so always replace it with the 2.7 for 2.6)
 try:
-    if USE_LIB_COPY:
-        from _pydev_imps._pydev_saved_modules import _queue
+    if USE_LIB_COPY or (py_version > (2,6,0) and py_version < (2,7,0)):
+        from _pydev_imps import _pydev_Queue as _queue
     else:
         import Queue as _queue
 except:
+    import traceback
+    traceback.print_exc()
     import queue as _queue #@UnresolvedImport
 
 

@@ -60,7 +60,7 @@ else:
     if python_implementation == 'CPython':
         # Only available for CPython!
         if (
-            (sys.version_info[0] == 2 and sys.version_info[1] >= 7)
+            (sys.version_info[0] == 2 and sys.version_info[1] >= 6)
             or (sys.version_info[0] == 3 and sys.version_info[1] >= 3)
             or (sys.version_info[0] > 3)
             ):
