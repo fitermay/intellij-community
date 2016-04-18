@@ -509,5 +509,14 @@ def array_to_meta_xml(array, name, format):
            (slice, rows, cols, format, type, bounds[1], bounds[0])
     return array, xml, rows, cols, format
 
+###To plugin in the dag bullshit
+import pydevd_dag_plugin
+orig_find_frame = find_frame
+def find_frame(thread_id, frame_id):
+    res = orig_find_frame(thread_id, frame_id)
+    if not res:
+        return res
+    res = pydevd_dag_plugin.maybe_enrich_frame(res, sys.modules[__name__])
+    return res
 
 
