@@ -516,7 +516,7 @@ def find_frame(thread_id, frame_id):
     res = orig_find_frame(thread_id, frame_id)
     if not res:
         return res
-    res = pydevd_dag_plugin.maybe_enrich_frame(res, sys.modules[__name__])
+    res = pydevd_dag_plugin.maybe_enrich_frame(res)
     return res
 
 
