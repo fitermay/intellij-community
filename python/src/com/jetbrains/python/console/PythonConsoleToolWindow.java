@@ -46,13 +46,13 @@ import java.util.List;
 public class PythonConsoleToolWindow {
   public static final Key<RunContentDescriptor> CONTENT_DESCRIPTOR = Key.create("CONTENT_DESCRIPTOR");
 
-  public static final Function<Content, RunContentDescriptor>
-    CONTENT_TO_DESCRIPTOR_FUNCTION = new Function<Content, RunContentDescriptor>() {
-    @Override
-    public RunContentDescriptor apply(@Nullable Content input) {
-      return input != null ? input.getUserData(CONTENT_DESCRIPTOR) : null;
-    }
-  };
+  public static final Function<Content, RunContentDescriptor> CONTENT_TO_DESCRIPTOR_FUNCTION =
+    new Function<Content, RunContentDescriptor>() {
+      @Override
+      public RunContentDescriptor apply(@Nullable Content input) {
+        return input != null ? input.getUserData(CONTENT_DESCRIPTOR) : null;
+      }
+    };
 
   private final Project myProject;
 
@@ -70,8 +70,7 @@ public class PythonConsoleToolWindow {
 
   public List<RunContentDescriptor> getConsoleContentDescriptors() {
     return FluentIterable.from(Lists.newArrayList(getToolWindow().getContentManager().getContents()))
-      .transform(CONTENT_TO_DESCRIPTOR_FUNCTION).filter(
-        Predicates.notNull()).toList();
+      .transform(CONTENT_TO_DESCRIPTOR_FUNCTION).filter(Predicates.notNull()).toList();
   }
 
 
@@ -110,7 +109,7 @@ public class PythonConsoleToolWindow {
   private static void setContent(ToolWindow toolWindow, RunContentDescriptor contentDescriptor) {
     toolWindow.getComponent().putClientProperty(ToolWindowContentUi.HIDE_ID_LABEL, "true");
 
-    Content content = toolWindow.getContentManager().findContent(contentDescriptor.getDisplayName());
+    Content content = findContentToReuse(toolWindow, contentDescriptor);
     if (content == null) {
       content = createContent(contentDescriptor);
       toolWindow.getContentManager().addContent(content);
@@ -123,6 +122,26 @@ public class PythonConsoleToolWindow {
     toolWindow.getContentManager().setSelectedContent(content);
   }
 
+  private static Content findContentToReuse(ToolWindow toolWindow, RunContentDescriptor contentDescriptor) {
+    Content[] contents = toolWindow.getContentManager().getContents();
+    String displayName = contentDescriptor.getDisplayName();
+    for (Content content : contents) {
+      if (content.getDisplayName().equals(displayName) && content.getExecutionId() == contentDescriptor.getExecutionId()) {
+        return content;
+      }
+    }
+    if (contentDescriptor.getExecutionId() != 0) {
+      for (Content content : contents) {
+        if (content.getExecutionId() == contentDescriptor.getExecutionId()) {
+          return content;
+        }
+      }
+    }
+
+    return null;
+
+  }
+
   public ToolWindow getToolWindow() {
     return ToolWindowManager.getInstance(myProject).getToolWindow(PythonConsoleToolWindowFactory.ID);
   }
@@ -132,6 +151,7 @@ public class PythonConsoleToolWindow {
 
     Content content = ContentFactory.SERVICE.getInstance().createContent(panel, contentDescriptor.getDisplayName(), false);
     content.setCloseable(true);
+    content.setExecutionId(contentDescriptor.getExecutionId());
 
     resetContent(contentDescriptor, panel, content);
 
@@ -139,7 +159,8 @@ public class PythonConsoleToolWindow {
   }
 
   private static void resetContent(RunContentDescriptor contentDescriptor, SimpleToolWindowPanel panel, Content content) {
-    RunContentDescriptor oldDescriptor = content.getDisposer() instanceof RunContentDescriptor ? (RunContentDescriptor)content.getDisposer() : null;
+    RunContentDescriptor oldDescriptor =
+      content.getDisposer() instanceof RunContentDescriptor ? (RunContentDescriptor)content.getDisposer() : null;
     if (oldDescriptor != null) Disposer.dispose(oldDescriptor);
 
     panel.setContent(contentDescriptor.getComponent());
@@ -147,6 +168,7 @@ public class PythonConsoleToolWindow {
     content.setComponent(panel);
     content.setDisposer(contentDescriptor);
     content.setPreferredFocusableComponent(contentDescriptor.getComponent());
+    content.setDisplayName(contentDescriptor.getDisplayName());
 
     content.putUserData(CONTENT_DESCRIPTOR, contentDescriptor);
     contentDescriptor.setAttachedContent(content);
