@@ -44,17 +44,14 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.util.Collections;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 /**
  * Communication with Xml-rpc with the client.
  *
  * @author Fabio
  */
-public class PydevConsoleCommunication extends AbstractConsoleCommunication implements XmlRpcHandler,
-                                                                                       PyFrameAccessor {
+public class PydevConsoleCommunication extends AbstractConsoleCommunication implements XmlRpcHandler, PyFrameAccessor {
 
   private static final String EXEC_LINE = "execLine";
   private static final String EXEC_MULTILINE = "execMultipleLines";
@@ -115,7 +112,7 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
 
     //start the server that'll handle input requests
     myWebServer = new MyWebServer(clientPort);
-    
+
     myWebServer.addHandler("$default", this);
     this.myWebServer.start();
 
@@ -190,7 +187,7 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
     }
   }
 
-  private Object execNotifyAboutMagic(Vector params) {
+  private String execNotifyAboutMagic(Vector params) {
     List<String> commands = (List<String>)params.get(0);
     boolean isAutoMagic = (Boolean)params.get(1);
 
@@ -203,7 +200,7 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
     return "";
   }
 
-  private Object execIPythonEditor(Vector params) {
+  private Boolean execIPythonEditor(Vector params) {
 
     String path = (String)params.get(0);
     int line = Integer.parseInt((String)params.get(1));
@@ -230,7 +227,7 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
     return Boolean.FALSE;
   }
 
-  private Object execNotifyFinished(boolean more) {
+  private Boolean execNotifyFinished(boolean more) {
     setExecuting(false);
     notifyCommandExecuted(more);
     return true;
@@ -240,7 +237,7 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
     myExecuting = executing;
   }
 
-  private Object execRequestInput() {
+  private String execRequestInput() {
     waitingForInput = true;
     inputReceived = null;
     boolean needInput = true;
@@ -589,13 +586,15 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
    * Request that pydevconsole connect (with pydevd) to the specified port
    *
    * @param localPort port for pydevd to connect to.
+   * @param dbgOpts additional debugger options (that are normally passed via command line) to apply
    * @throws Exception if connection fails
    */
-  public void connectToDebugger(int localPort) throws Exception {
+  public void connectToDebugger(int localPort, Map<String, Boolean> dbgOpts) throws Exception {
     if (waitingForInput) {
       throw new Exception("Can't connect debugger now, waiting for input");
     }
-    Object result = myClient.execute(CONNECT_TO_DEBUGGER, new Object[]{localPort});
+    /* argument needs to be hashtable type for compatability with the RPC library */
+    Object result = myClient.execute(CONNECT_TO_DEBUGGER, new Object[]{localPort, new Hashtable<>(dbgOpts)});
     Exception exception = null;
     if (result instanceof Vector) {
       Vector resultarray = (Vector)result;
@@ -627,21 +626,21 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
   public PythonDebugConsoleCommunication getDebugCommunication() {
     return myDebugCommunication;
   }
-  
-  
+
+
   public boolean waitForTerminate() {
     if (myWebServer != null) {
       return myWebServer.waitForTerminate();
     }
-    
+
     return true;
   }
-  
+
   private static final class MyWebServer extends WebServer {
     public MyWebServer(int port) {
       super(port);
     }
-    
+
     @Override
     public synchronized void shutdown() {
       try {
@@ -654,10 +653,10 @@ public class PydevConsoleCommunication extends AbstractConsoleCommunication impl
       }
       super.shutdown();
     }
-    
+
     public boolean waitForTerminate() {
       if (listener != null) {
-        return new WaitFor(10000){
+        return new WaitFor(10000) {
           @Override
           protected boolean condition() {
             return !listener.isAlive();
