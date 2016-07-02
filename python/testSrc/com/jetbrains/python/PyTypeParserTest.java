@@ -164,8 +164,8 @@ public class PyTypeParserTest extends PyTestCase {
     assertInstanceOf(type, PyUnionType.class);
     final List<PyType> members = Lists.newArrayList(((PyUnionType)type).getMembers());
     assertEquals(2, members.size());
-    assertNull(members.get(0));
-    assertClassType(members.get(1), "int");
+    assertNull(members.get(1));
+    assertClassType(members.get(0), "int");
   }
 
   public void testUnionParamPriority() {
