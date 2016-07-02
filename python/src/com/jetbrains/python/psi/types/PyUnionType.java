@@ -209,7 +209,7 @@ public class PyUnionType implements PyType {
 
   public Iterable<PyType> getMembers() {
     //Preserve the null member behavior for outside world
-    return !isWeak() ? Collections.unmodifiableSet(myMembers) : Iterables.concat(Collections.singletonList(null), myMembers);
+    return !isWeak() ? Collections.unmodifiableSet(myMembers) : Iterables.concat(myMembers, Collections.singletonList(null));
   }
 
   /**
