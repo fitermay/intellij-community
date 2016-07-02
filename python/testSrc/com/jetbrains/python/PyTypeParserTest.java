@@ -15,6 +15,7 @@
  */
 package com.jetbrains.python;
 
+import com.google.common.collect.Lists;
 import com.intellij.psi.PsiFile;
 import com.jetbrains.python.documentation.PythonDocumentationProvider;
 import com.jetbrains.python.fixtures.PyTestCase;
@@ -75,7 +76,7 @@ public class PyTypeParserTest extends PyTestCase {
     myFixture.configureByFile("typeParser/typeParser.py");
     final PyUnionType type = (PyUnionType)PyTypeParser.getTypeByName(myFixture.getFile(), "MyObject or str");
     assertNotNull(type);
-    final Collection<PyType> members = type.getMembers();
+    final Collection<PyType> members = Lists.newArrayList(type.getMembers());
     assertEquals(2, members.size());
     final List<PyType> list = new ArrayList<PyType>(members);
     assertClassType(list.get(0), "MyObject");
@@ -102,7 +103,7 @@ public class PyTypeParserTest extends PyTestCase {
     assertNotNull(type);
     assertInstanceOf(type, PyUnionType.class);
     final PyUnionType unionType = (PyUnionType)type;
-    final ArrayList<PyType> types = new ArrayList<PyType>(unionType.getMembers());
+    final ArrayList<PyType> types = Lists.newArrayList(unionType.getMembers());
     assertClassType(types.get(0), "str");
     assertClassType(types.get(1), "unicode");
   }
@@ -161,7 +162,7 @@ public class PyTypeParserTest extends PyTestCase {
     final PyType type = PyTypeParser.getTypeByName(myFixture.getFile(), "Unresolved or int");
     assertNotNull(type);
     assertInstanceOf(type, PyUnionType.class);
-    final List<PyType> members = new ArrayList<PyType>(((PyUnionType)type).getMembers());
+    final List<PyType> members = Lists.newArrayList(((PyUnionType)type).getMembers());
     assertEquals(2, members.size());
     assertNull(members.get(0));
     assertClassType(members.get(1), "int");
@@ -228,7 +229,7 @@ public class PyTypeParserTest extends PyTestCase {
     myFixture.configureByFile("typeParser/typeParser.py");
     final PyUnionType type = (PyUnionType)PyTypeParser.getTypeByName(myFixture.getFile(), "MyObject | str | unicode");
     assertNotNull(type);
-    final Collection<PyType> members = type.getMembers();
+    final Collection<PyType> members = Lists.newArrayList(type.getMembers());
     assertEquals(3, members.size());
     final List<PyType> list = new ArrayList<PyType>(members);
     assertClassType(list.get(0), "MyObject");

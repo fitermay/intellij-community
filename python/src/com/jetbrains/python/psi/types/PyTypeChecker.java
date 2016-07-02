@@ -249,7 +249,7 @@ public class PyTypeChecker {
   }
 
   public static boolean isUnknown(@Nullable PyType type) {
-    if (type == null || type instanceof PyGenericType) {
+    if (type == null || type == PyNoneType.WEAK_INSTANCE || type instanceof PyGenericType) {
       return true;
     }
     if (type instanceof PyUnionType) {
@@ -271,7 +271,7 @@ public class PyTypeChecker {
         return unionType.excludeNull(context);
       }
     }
-    return type;
+    return type == PyNoneType.WEAK_INSTANCE ? PyNoneType.INSTANCE : type;
   }
 
   public static boolean hasGenerics(@Nullable PyType type, @NotNull TypeEvalContext context) {

@@ -15,36 +15,26 @@
  */
 package com.jetbrains.python.psi.types;
 
+import com.google.common.collect.Sets;
 import com.jetbrains.python.PyNames;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 
 /**
  * @author vlan
  */
 public class PyDynamicallyEvaluatedType extends PyUnionType {
-  private PyDynamicallyEvaluatedType(@NotNull Collection<PyType> members) {
-    super(members);
+  private PyDynamicallyEvaluatedType(@NotNull LinkedHashSet<PyType> members) {
+    super(members, true);
   }
 
   @NotNull
   public static PyDynamicallyEvaluatedType create(@NotNull PyType type) {
-    final List<PyType> members = new ArrayList<PyType>();
-    if (type instanceof PyUnionType) {
-      final PyUnionType unionType = (PyUnionType)type;
-      members.addAll(unionType.getMembers());
-      if (!unionType.isWeak()) {
-        members.add(null);
-      }
-    }
-    else {
-      members.add(type);
-      members.add(null);
-    }
-    return new PyDynamicallyEvaluatedType(members);
+
+    return new PyDynamicallyEvaluatedType(type instanceof PyUnionType ? ((PyUnionType)type).myMembers : Sets.newLinkedHashSet(
+      Collections.singleton(type)));
   }
 
   @Override

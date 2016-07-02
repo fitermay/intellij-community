@@ -58,7 +58,6 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
@@ -325,7 +324,7 @@ public class PyTargetExpressionImpl extends PyBaseElementImpl<PyTargetExpression
       return PyUnionType.union(memberTypes);
     }
     else if (iterableType instanceof PyUnionType) {
-      final Collection<PyType> members = ((PyUnionType)iterableType).getMembers();
+      final Iterable<PyType> members = ((PyUnionType)iterableType).getMembers();
       final List<PyType> iterationTypes = new ArrayList<PyType>();
       for (PyType member : members) {
         iterationTypes.add(getIterationType(member, source, anchor, context));

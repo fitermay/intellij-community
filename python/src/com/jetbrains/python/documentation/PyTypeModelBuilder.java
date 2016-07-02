@@ -15,7 +15,7 @@
  */
 package com.jetbrains.python.documentation;
 
-import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.intellij.psi.PsiElement;
 import com.jetbrains.python.PyNames;
@@ -26,6 +26,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import static com.jetbrains.python.documentation.DocumentationBuilderKit.$;
 import static com.jetbrains.python.documentation.DocumentationBuilderKit.combUp;
@@ -226,7 +228,8 @@ public class PyTypeModelBuilder {
         result = Optional
           .ofNullable(getOptionalType(unionType))
           .<PyTypeModelBuilder.TypeModel>map(optionalType -> new OptionalType(build(optionalType, true)))
-          .orElseGet(() -> new OneOf(Collections2.transform(unionType.getMembers(), t -> build(t, false))));
+          .orElseGet(() -> new OneOf(
+            StreamSupport.stream(unionType.getMembers().spliterator(), false).map(t -> build(t, false)).collect(Collectors.toList())));
       }
     }
     else if (type instanceof PyCallableType && !(type instanceof PyClassLikeType)) {
@@ -250,7 +253,7 @@ public class PyTypeModelBuilder {
 
   @Nullable
   private static PyType getOptionalType(@NotNull PyUnionType type) {
-    final Collection<PyType> members = type.getMembers();
+    final Collection<PyType> members = Lists.newArrayList(type.getMembers());
     if (members.size() == 2) {
       boolean foundNone = false;
       PyType optional = null;

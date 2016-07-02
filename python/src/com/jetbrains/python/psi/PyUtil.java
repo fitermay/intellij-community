@@ -1576,7 +1576,7 @@ public class PyUtil {
     }
     else if (type instanceof PyUnionType) {
       final List<List<PyParameter>> results = new ArrayList<List<PyParameter>>();
-      final Collection<PyType> members = ((PyUnionType)type).getMembers();
+      final Iterable<PyType> members = ((PyUnionType)type).getMembers();
       for (PyType member : members) {
         if (member instanceof PyCallableType) {
           final List<PyParameter> parameters = getParametersOfCallableType((PyCallableType)member, context);

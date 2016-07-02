@@ -15,6 +15,8 @@
  */
 package com.jetbrains.python.psi.types;
 
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.util.NullableFunction;
@@ -33,10 +35,12 @@ import java.util.*;
  * @author yole
  */
 public class PyUnionType implements PyType {
-  private final Set<PyType> myMembers;
+  protected final LinkedHashSet<PyType> myMembers;
+  private boolean myIsWeak;
 
-  PyUnionType(Collection<PyType> members) {
-    myMembers = new LinkedHashSet<PyType>(members);
+  protected PyUnionType(LinkedHashSet<PyType> members, boolean isWeak) {
+    myMembers = members;
+    myIsWeak = isWeak;
   }
 
   @Nullable
@@ -47,12 +51,10 @@ public class PyUnionType implements PyType {
     SmartList<RatedResolveResult> ret = new SmartList<RatedResolveResult>();
     boolean allNulls = true;
     for (PyType member : myMembers) {
-      if (member != null) {
-        List<? extends RatedResolveResult> result = member.resolveMember(name, location, direction, resolveContext);
-        if (result != null) {
-          allNulls = false;
-          ret.addAll(result);
-        }
+      List<? extends RatedResolveResult> result = member.resolveMember(name, location, direction, resolveContext);
+      if (result != null) {
+        allNulls = false;
+        ret.addAll(result);
       }
     }
     return allNulls ? null : ret;
@@ -61,15 +63,13 @@ public class PyUnionType implements PyType {
   public Object[] getCompletionVariants(String completionPrefix, PsiElement location, ProcessingContext context) {
     Set<Object> variants = new HashSet<Object>();
     for (PyType member : myMembers) {
-      if (member != null) {
-        Collections.addAll(variants, member.getCompletionVariants(completionPrefix, location, context));
-      }
+      Collections.addAll(variants, member.getCompletionVariants(completionPrefix, location, context));
     }
     return variants.toArray(new Object[variants.size()]);
   }
 
   public String getName() {
-    return StringUtil.join(myMembers, (NullableFunction<PyType, String>)type -> type != null ? type.getName() : null, " | ");
+    return StringUtil.join(getMembers(), (NullableFunction<PyType, String>)type -> type != null ? type.getName() : null, " | ");
   }
 
   /**
@@ -77,8 +77,14 @@ public class PyUnionType implements PyType {
    */
   @Override
   public boolean isBuiltin() {
+
+    if (myIsWeak) {
+      return false;
+    }
     for (PyType one : myMembers) {
-      if (one == null || !one.isBuiltin()) return false;
+      if (!one.isBuiltin()) {
+        return false;
+      }
     }
     return true;
   }
@@ -86,31 +92,76 @@ public class PyUnionType implements PyType {
   @Override
   public void assertValid(String message) {
     for (PyType member : myMembers) {
-      if (member != null) {
-        member.assertValid(message);
-      }
+      member.assertValid(message);
     }
   }
 
   @Nullable
   public static PyType union(@Nullable PyType type1, @Nullable PyType type2) {
-    Set<PyType> members = new LinkedHashSet<PyType>();
-    if (type1 instanceof PyUnionType) {
-      members.addAll(((PyUnionType)type1).myMembers);
+    if (type1 instanceof PyUnionType && type2 instanceof PyUnionType) {
+      return joinTwoUnionTypes((PyUnionType)type1, (PyUnionType)type2);
+    }
+    else if ((type1 instanceof PyUnionType || type2 instanceof PyUnionType)) {
+      return (type1 instanceof PyUnionType)
+             ? joinUnionAndRegular((PyUnionType)type1, type2, false)
+             : joinUnionAndRegular((PyUnionType)type2, type1, true);
     }
     else {
-      members.add(type1);
+      return joinNonUnionTypes(type1, type2);
     }
-    if (type2 instanceof PyUnionType) {
-      members.addAll(((PyUnionType)type2).myMembers);
+  }
+
+  private static PyType joinNonUnionTypes(@Nullable PyType type1, @Nullable PyType type2) {
+    if (type1 == null && type2 == null) {
+      return null;
+    }
+    if (type1 == null || type2 == null) {
+      return createWeakType(type1 == null ? type2 : type1);
+    }
+    else if (type1.equals(type2)) {
+      return type1;
+    }
+    else if ((type1 == PyNoneType.WEAK_INSTANCE || type2 == PyNoneType.WEAK_INSTANCE) &&
+             (type1 == PyNoneType.INSTANCE || type2 == PyNoneType.INSTANCE)) { //special case
+      return PyNoneType.WEAK_INSTANCE;
     }
     else {
-      members.add(type2);
+      boolean isWeak = (type1 == PyNoneType.WEAK_INSTANCE || type2 == PyNoneType.WEAK_INSTANCE);
+      LinkedHashSet<PyType> set = Sets.newLinkedHashSet();
+      set.add((type1 == PyNoneType.WEAK_INSTANCE) ? PyNoneType.INSTANCE : type1);
+      set.add((type2 == PyNoneType.WEAK_INSTANCE) ? PyNoneType.INSTANCE : type2);
+      return new PyUnionType(set, isWeak);
     }
-    if (members.size() == 1) {
-      return members.iterator().next();
+  }
+
+  private static PyType joinUnionAndRegular(@NotNull PyUnionType type1, @Nullable PyType type2, boolean flipOrder) {
+    if (type2 != null && type1.myMembers.contains(type2)) {
+      return type1;
     }
-    return new PyUnionType(members);
+    else if (type2 == null) {
+      return new PyUnionType(type1.myMembers, true);
+    }
+    else {
+      Iterable<PyType> concatenated = flipOrder ? Iterables.concat(Collections.singletonList(type2), type1.myMembers) :
+                                      Iterables.concat(type1.myMembers, Collections.singletonList(type2));
+      return new PyUnionType(Sets.newLinkedHashSet(concatenated), type1.myIsWeak || type2 == PyNoneType.WEAK_INSTANCE);
+    }
+  }
+
+  private static PyUnionType joinTwoUnionTypes(@NotNull PyUnionType type1, @NotNull PyUnionType type2) {
+    LinkedHashSet<PyType> members1 = type1.myMembers;
+    LinkedHashSet<PyType> members2 = type2.myMembers;
+    boolean isWeak = type1.myIsWeak || type2.myIsWeak;
+    if (members1.size() < members2.size() && members2.containsAll(members1)) {
+      return new PyUnionType(members2, isWeak);
+    }
+    else if (members1.containsAll(members2)) {
+      return new PyUnionType(members1, isWeak);
+    }
+    else {
+      LinkedHashSet<PyType> joinedSet = Sets.newLinkedHashSet(Iterables.concat(members1, members2));
+      return new PyUnionType(joinedSet, isWeak);
+    }
   }
 
   @Nullable
@@ -124,7 +175,7 @@ public class PyUnionType implements PyType {
     }
     else {
       final Iterator<PyType> it = members.iterator();
-      PyType res = unit(it.next());
+      PyType res = it.next();
       while (it.hasNext()) {
         res = union(res, it.next());
       }
@@ -142,21 +193,23 @@ public class PyUnionType implements PyType {
       if (unionType.isWeak()) {
         return unionType;
       }
+      else {
+        return new PyUnionType(((PyUnionType)type).myMembers, true);
+      }
     }
-    return union(type, null);
+    else if (type instanceof PyNoneType) {
+      return PyNoneType.WEAK_INSTANCE;
+    }
+    return new PyUnionType(Sets.newLinkedHashSet(Collections.singleton(type)), true);
   }
 
   public boolean isWeak() {
-    for (PyType member : myMembers) {
-      if (member == null) {
-        return true;
-      }
-    }
-    return false;
+    return myIsWeak;
   }
 
-  public Collection<PyType> getMembers() {
-    return myMembers;
+  public Iterable<PyType> getMembers() {
+    //Preserve the null member behavior for outside world
+    return !isWeak() ? Collections.unmodifiableSet(myMembers) : Iterables.concat(Collections.singletonList(null), myMembers);
   }
 
   /**
@@ -187,32 +240,34 @@ public class PyUnionType implements PyType {
 
   @Nullable
   public PyType excludeNull(@NotNull TypeEvalContext context) {
-    return exclude(null, context);
-  }
+    if (myIsWeak) {
 
-  private static PyType unit(@Nullable PyType type) {
-    if (type instanceof PyUnionType) {
-      Set<PyType> members = new LinkedHashSet<PyType>();
-      members.addAll(((PyUnionType)type).getMembers());
-      return new PyUnionType(members);
+      return myMembers.size() > 1 ? new PyUnionType(myMembers, false) : myMembers.iterator().next();
     }
     else {
-      return new PyUnionType(Collections.singletonList(type));
+      return this;
     }
   }
 
+
   @Override
-  public boolean equals(Object other) {
-    if (other instanceof PyUnionType) {
-      final PyUnionType otherType = (PyUnionType)other;
-      return myMembers.equals(otherType.myMembers);
-    }
-    return false;
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (!(o instanceof PyUnionType)) return false;
+
+    PyUnionType type = (PyUnionType)o;
+
+    if (myIsWeak != type.myIsWeak) return false;
+    if (!myMembers.equals(type.myMembers)) return false;
+
+    return true;
   }
 
   @Override
   public int hashCode() {
-    return myMembers.hashCode();
+    int result = myMembers.hashCode();
+    result = 31 * result + (myIsWeak ? 1 : 0);
+    return result;
   }
 
   @Override
