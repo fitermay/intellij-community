@@ -108,7 +108,7 @@ public abstract class InspectionToolsConfigurable extends BaseConfigurable
   }
 
   @NotNull
-  private InspectionProfileImpl copyToNewProfile(ModifiableModel selectedProfile,
+  private InspectionProfileImpl copyToNewProfile(@NotNull InspectionProfileImpl selectedProfile,
                                                  @NotNull Project project,
                                                  boolean modifyName,
                                                  boolean modifyLevel) {
@@ -245,20 +245,10 @@ public abstract class InspectionToolsConfigurable extends BaseConfigurable
       }
 
       @Override
-      public void moveToProject() {
+      public void copyToAnotherLevel() {
         final SingleInspectionProfilePanel selectedPanel = getSelectedPanel();
         LOG.assertTrue(selectedPanel != null, "No settings selectedPanel for: " + getSelectedObject());
         copyToNewProfile(getSelectedObject(), getProject(), false, true);
-      }
-
-      @Override
-      public void setAsGlobal() {
-        final SingleInspectionProfilePanel selectedPanel = getSelectedPanel();
-        LOG.assertTrue(selectedPanel != null, "No settings selectedPanel for: " + getSelectedObject());
-        selectedPanel.getProfile().setProjectLevel(false);
-        myProfiles.getProfilesComboBox().resort();
-        myProfiles.invalidate();
-        myProfiles.repaint();
       }
 
       @Override

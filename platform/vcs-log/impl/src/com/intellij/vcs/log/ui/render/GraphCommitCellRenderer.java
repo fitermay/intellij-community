@@ -20,16 +20,19 @@ import com.intellij.util.ui.UIUtil;
 import com.intellij.vcs.log.VcsRef;
 import com.intellij.vcs.log.VcsRefType;
 import com.intellij.vcs.log.data.VcsLogData;
+import com.intellij.vcs.log.graph.EdgePrintElement;
 import com.intellij.vcs.log.graph.PrintElement;
 import com.intellij.vcs.log.graph.VisibleGraph;
 import com.intellij.vcs.log.paint.GraphCellPainter;
 import com.intellij.vcs.log.paint.PaintParameters;
 import com.intellij.vcs.log.ui.frame.ReferencesPanel;
 import com.intellij.vcs.log.ui.frame.VcsLogGraphTable;
+import com.intellij.vcs.log.ui.tables.GraphTableModel;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
+import javax.swing.table.TableColumn;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.util.Collection;
@@ -37,7 +40,7 @@ import java.util.Map;
 
 public class GraphCommitCellRenderer extends ColoredTableCellRenderer {
   private static final Logger LOG = Logger.getInstance(GraphCommitCellRenderer.class);
-  private static final int MAX_GRAPH_WIDTH = 10;
+  private static final int MAX_GRAPH_WIDTH = 6;
 
   private static final int VERTICAL_PADDING = JBUI.scale(7);
 
@@ -135,10 +138,10 @@ public class GraphCommitCellRenderer extends ColoredTableCellRenderer {
       graphPadding = 0;
     }
 
-    SimpleTextAttributes style = myGraphTable.applyHighlighters(this, row, column, "", hasFocus, isSelected);
+    SimpleTextAttributes style = myGraphTable.applyHighlighters(this, row, column, hasFocus, isSelected);
 
     Collection<VcsRef> refs = cell.getRefsToThisCommit();
-    Color foreground = ObjectUtils.assertNotNull(myGraphTable.getBaseStyle(row, column, "", hasFocus, isSelected).getForeground());
+    Color foreground = ObjectUtils.assertNotNull(myGraphTable.getBaseStyle(row, column, hasFocus, isSelected).getForeground());
     myExpanded = myGraphTable.getExpandableItemsHandler().getExpandedItems().contains(new TableCell(row, column));
     if (myFadeOutPainter != null) {
       myFadeOutPainter.customize(refs, row, column, table, foreground);
@@ -165,19 +168,24 @@ public class GraphCommitCellRenderer extends ColoredTableCellRenderer {
   private PaintInfo getGraphImage(int row) {
     VisibleGraph<Integer> graph = myGraphTable.getVisibleGraph();
     Collection<? extends PrintElement> printElements = graph.getRowInfo(row).getPrintElements();
-    int maxIndex = 0;
+    double maxIndex = 0;
     for (PrintElement printElement : printElements) {
       maxIndex = Math.max(maxIndex, printElement.getPositionInCurrentRow());
+      if (printElement instanceof EdgePrintElement) {
+        maxIndex = Math.max(maxIndex,
+                            (printElement.getPositionInCurrentRow() + ((EdgePrintElement)printElement).getPositionInOtherRow()) / 2.0);
+      }
     }
     maxIndex++;
+
     maxIndex = Math.max(maxIndex, Math.min(MAX_GRAPH_WIDTH, graph.getRecommendedWidth()));
-    final BufferedImage image = UIUtil
-      .createImage(PaintParameters.getNodeWidth(myGraphTable.getRowHeight()) * (maxIndex + 4), myGraphTable.getRowHeight(),
-                   BufferedImage.TYPE_INT_ARGB);
+    BufferedImage image = UIUtil.createImage((int)(PaintParameters.getNodeWidth(myGraphTable.getRowHeight()) * (maxIndex + 2)),
+                                             myGraphTable.getRowHeight(),
+                                             BufferedImage.TYPE_INT_ARGB);
     Graphics2D g2 = image.createGraphics();
     myPainter.draw(g2, printElements);
 
-    int width = maxIndex * PaintParameters.getNodeWidth(myGraphTable.getRowHeight());
+    int width = (int)(maxIndex * PaintParameters.getNodeWidth(myGraphTable.getRowHeight()));
     return new PaintInfo(image, width);
   }
 
@@ -203,6 +211,17 @@ public class GraphCommitCellRenderer extends ColoredTableCellRenderer {
       }
     }
     return null;
+  }
+
+  public int getToolipXCoordinate(int row) {
+    GraphCommitCell cell = getAssertCommitCell(myGraphTable.getModel().getValueAt(row, GraphTableModel.COMMIT_COLUMN));
+    Collection<VcsRef> refs = cell.getRefsToThisCommit();
+    if (!refs.isEmpty()) {
+      customizeRefsPainter(myReferencePainter, refs, getForeground());
+      TableColumn commitColumn = myGraphTable.getColumnModel().getColumn(GraphTableModel.COMMIT_COLUMN);
+      return commitColumn.getWidth() - (myReferencePainter.getSize().width - LabelPainter.GRADIENT_WIDTH) / 2;
+    }
+    return -1;
   }
 
   private static class PaintInfo {

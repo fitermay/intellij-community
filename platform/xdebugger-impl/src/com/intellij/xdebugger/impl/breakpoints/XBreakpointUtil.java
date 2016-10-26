@@ -34,6 +34,7 @@ import com.intellij.xdebugger.impl.XDebuggerUtilImpl;
 import com.intellij.xdebugger.impl.XSourcePositionImpl;
 import com.intellij.xdebugger.impl.breakpoints.ui.BreakpointItem;
 import com.intellij.xdebugger.impl.breakpoints.ui.BreakpointPanelProvider;
+import one.util.streamex.StreamEx;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -63,16 +64,11 @@ public class XBreakpointUtil {
 
   @Nullable
   public static XBreakpointType<?, ?> findType(@NotNull @NonNls String id) {
-    for (XBreakpointType breakpointType : getBreakpointTypes()) {
-      if (id.equals(breakpointType.getId())) {
-        return breakpointType;
-      }
-    }
-    return null;
+    return breakpointTypes().filter(breakpointType -> id.equals(breakpointType.getId())).findFirst().orElse(null);
   }
 
-  public static XBreakpointType<?, ?>[] getBreakpointTypes() {
-    return XBreakpointType.EXTENSION_POINT_NAME.getExtensions();
+  public static StreamEx<XBreakpointType> breakpointTypes() {
+    return StreamEx.of(XBreakpointType.EXTENSION_POINT_NAME.getExtensions());
   }
 
   @NotNull

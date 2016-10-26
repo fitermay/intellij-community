@@ -86,6 +86,7 @@ import com.sun.jdi.connect.*;
 import com.sun.jdi.request.EventRequest;
 import com.sun.jdi.request.EventRequestManager;
 import com.sun.jdi.request.StepRequest;
+import one.util.streamex.StreamEx;
 import org.intellij.lang.annotations.MagicConstant;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
@@ -168,12 +169,7 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
         myNodeRenderersMap.clear();
         myRenderers.clear();
         try {
-          final NodeRendererSettings rendererSettings = NodeRendererSettings.getInstance();
-          for (final NodeRenderer renderer : rendererSettings.getAllRenderers()) {
-            if (renderer.isEnabled()) {
-              myRenderers.add(renderer);
-            }
-          }
+          NodeRendererSettings.getInstance().getAllRenderers().stream().filter(NodeRenderer::isEnabled).forEachOrdered(myRenderers::add);
         }
         finally {
           DebuggerInvocationUtil.swingInvokeLater(myProject, () -> {
@@ -225,10 +221,17 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
       return getDefaultRenderer(type);
     }
 
-    return myNodeRenderersMap.computeIfAbsent(type, t ->
-      myRenderers.stream().
-        filter(r -> DebuggerUtilsImpl.suppressExceptions(() -> r.isApplicable(type), false)).
-        findFirst().orElseGet(() -> getDefaultRenderer(type)));
+    try {
+      return myNodeRenderersMap.computeIfAbsent(type, t ->
+        myRenderers.stream().
+          filter(r -> DebuggerUtilsImpl.suppressExceptions(() -> r.isApplicable(type), false, true, ClassNotPreparedException.class)).
+          findFirst().orElseGet(() -> getDefaultRenderer(type)));
+    }
+    catch (ClassNotPreparedException e) {
+      LOG.info(e);
+      // use default, but do not cache
+      return getDefaultRenderer(type);
+    }
   }
 
   @NotNull
@@ -393,23 +396,13 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
 
   @NotNull
   private static List<ClassFilter> getActiveFilters() {
-    List<ClassFilter> activeFilters = new ArrayList<>();
     DebuggerSettings settings = DebuggerSettings.getInstance();
+    StreamEx<ClassFilter> stream = StreamEx.of(Extensions.getExtensions(DebuggerClassFilterProvider.EP_NAME))
+      .flatCollection(DebuggerClassFilterProvider::getFilters);
     if (settings.TRACING_FILTERS_ENABLED) {
-      for (ClassFilter filter : settings.getSteppingFilters()) {
-        if (filter.isEnabled()) {
-          activeFilters.add(filter);
-        }
-      }
+      stream = stream.prepend(settings.getSteppingFilters());
     }
-    for (DebuggerClassFilterProvider provider : Extensions.getExtensions(DebuggerClassFilterProvider.EP_NAME)) {
-      for (ClassFilter filter : provider.getFilters()) {
-        if (filter.isEnabled()) {
-          activeFilters.add(filter);
-        }
-      }
-    }
-    return activeFilters;
+    return stream.filter(ClassFilter::isEnabled).toList();
   }
 
   void deleteStepRequests(@Nullable final ThreadReference stepThread) {
@@ -1087,19 +1080,12 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
 
             if (!Patches.IBM_JDK_DISABLE_COLLECTION_BUG) {
               // ensure args are not collected
-              for (Object arg : myArgs) {
-                if (arg instanceof ObjectReference) {
-                  DebuggerUtilsEx.disableCollection((ObjectReference)arg);
-                }
-              }
+              StreamEx.of(myArgs).select(ObjectReference.class).forEach(DebuggerUtilsEx::disableCollection);
             }
 
             // workaround for jdi hang in trace mode
             if (!StringUtil.isEmpty(ourTrace)) {
-              for (Object arg : myArgs) {
-                //noinspection ResultOfMethodCallIgnored
-                arg.toString();
-              }
+              myArgs.forEach(Object::toString);
             }
 
             result[0] = invokeMethod(invokePolicy, myMethod, myArgs);
@@ -1108,11 +1094,7 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
             //  assertThreadSuspended(thread, context);
             if (!Patches.IBM_JDK_DISABLE_COLLECTION_BUG) {
               // ensure args are not collected
-              for (Object arg : myArgs) {
-                if (arg instanceof ObjectReference) {
-                  DebuggerUtilsEx.enableCollection((ObjectReference)arg);
-                }
-              }
+              StreamEx.of(myArgs).select(ObjectReference.class).forEach(DebuggerUtilsEx::enableCollection);
             }
           }
         }
@@ -1384,9 +1366,7 @@ public abstract class DebugProcessImpl extends UserDataHolderBase implements Deb
 
     StringBuilder buffer = StringBuilderSpinAllocator.alloc();
     try {
-      for (int i = 0; i < dims; i++) {
-        buffer.append('[');
-      }
+      StringUtil.repeatSymbol(buffer, '[', dims);
       String primitiveSignature = JVMNameUtil.getPrimitiveSignature(className);
       if(primitiveSignature != null) {
         buffer.append(primitiveSignature);

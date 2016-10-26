@@ -71,7 +71,6 @@ import com.intellij.xdebugger.impl.ui.tree.XDebuggerTreeState;
 import com.intellij.xdebugger.impl.ui.tree.actions.XDebuggerTreeActionBase;
 import com.intellij.xdebugger.settings.XDebuggerSettings;
 import com.intellij.xdebugger.ui.DebuggerColors;
-import gnu.trove.THashMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.concurrency.AsyncPromise;
@@ -89,19 +88,12 @@ import static org.jetbrains.concurrency.Promises.rejectedPromise;
  */
 public class XDebuggerUtilImpl extends XDebuggerUtil {
   private XLineBreakpointType<?>[] myLineBreakpointTypes;
-  private Map<Class<? extends XBreakpointType>, XBreakpointType<?, ?>> myBreakpointTypeByClass;
+  private Map<Class<? extends XBreakpointType>, XBreakpointType> myBreakpointTypeByClass;
 
   @Override
   public XLineBreakpointType<?>[] getLineBreakpointTypes() {
     if (myLineBreakpointTypes == null) {
-      XBreakpointType[] types = XBreakpointUtil.getBreakpointTypes();
-      List<XLineBreakpointType<?>> lineBreakpointTypes = new ArrayList<>();
-      for (XBreakpointType type : types) {
-        if (type instanceof XLineBreakpointType<?>) {
-          lineBreakpointTypes.add((XLineBreakpointType<?>)type);
-        }
-      }
-      myLineBreakpointTypes = lineBreakpointTypes.toArray(new XLineBreakpointType<?>[lineBreakpointTypes.size()]);
+      myLineBreakpointTypes = XBreakpointUtil.breakpointTypes().select(XLineBreakpointType.class).toArray(XLineBreakpointType<?>[]::new);
     }
     return myLineBreakpointTypes;
   }
@@ -121,12 +113,7 @@ public class XDebuggerUtilImpl extends XDebuggerUtil {
 
   @Override
   public boolean canPutBreakpointAt(@NotNull Project project, @NotNull VirtualFile file, int line) {
-    for (XLineBreakpointType<?> type : getLineBreakpointTypes()) {
-      if (type.canPutAt(file, line, project)) {
-        return true;
-      }
-    }
-    return false;
+    return Arrays.stream(getLineBreakpointTypes()).anyMatch(type -> type.canPutAt(file, line, project));
   }
 
   @Override
@@ -275,13 +262,13 @@ public class XDebuggerUtilImpl extends XDebuggerUtil {
             else {
               P properties = variants.get(0).createProperties();
               result.setResult(
-                Promise.resolve((XLineBreakpoint)breakpointManager.addLineBreakpoint(type, file.getUrl(), line, properties, temporary)));
+                Promise.resolve(breakpointManager.addLineBreakpoint(type, file.getUrl(), line, properties, temporary)));
               return;
             }
           }
           P properties = type.createBreakpointProperties(file, line);
           result.setResult(
-            Promise.resolve((XLineBreakpoint)breakpointManager.addLineBreakpoint(type, file.getUrl(), line, properties, temporary)));
+            Promise.resolve(breakpointManager.addLineBreakpoint(type, file.getUrl(), line, properties, temporary)));
           return;
         }
         result.setResult(rejectedPromise());
@@ -302,12 +289,9 @@ public class XDebuggerUtilImpl extends XDebuggerUtil {
   @Override
   public <T extends XBreakpointType> T findBreakpointType(@NotNull Class<T> typeClass) {
     if (myBreakpointTypeByClass == null) {
-      myBreakpointTypeByClass = new THashMap<>();
-      for (XBreakpointType<?, ?> breakpointType : XBreakpointUtil.getBreakpointTypes()) {
-        myBreakpointTypeByClass.put(breakpointType.getClass(), breakpointType);
-      }
+      myBreakpointTypeByClass = XBreakpointUtil.breakpointTypes().toMap(XBreakpointType::getClass, t -> t);
     }
-    XBreakpointType<?, ?> type = myBreakpointTypeByClass.get(typeClass);
+    XBreakpointType type = myBreakpointTypeByClass.get(typeClass);
     //noinspection unchecked
     return (T)type;
   }
@@ -568,11 +552,9 @@ public class XDebuggerUtilImpl extends XDebuggerUtil {
 
   public static void rebuildAllSessionsViews(@Nullable Project project) {
     if (project == null) return;
-    for (XDebugSession session : XDebuggerManager.getInstance(project).getDebugSessions()) {
-      if (session.isSuspended()) {
-        session.rebuildViews();
-      }
-    }
+    Arrays.stream(XDebuggerManager.getInstance(project).getDebugSessions())
+      .filter(XDebugSession::isSuspended)
+      .forEach(XDebugSession::rebuildViews);
   }
 
   public static void rebuildTreeAndViews(XDebuggerTree tree) {

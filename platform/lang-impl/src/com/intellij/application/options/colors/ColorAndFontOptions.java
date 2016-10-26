@@ -839,7 +839,20 @@ public class ColorAndFontOptions extends SearchableConfigurable.Parent.Abstract 
       if (scheme == null) {
         scheme = getScheme();
       }
-      scheme.setAttributes(key, isInherited() ? new TextAttributes() : getTextAttributes());
+
+      if (scheme instanceof EditorColorsSchemeImpl) {
+        if (!isInherited()) {
+          ((EditorColorsSchemeImpl)scheme).setAttributes(key, getTextAttributes(), myIsInheritedInitial);
+        }
+        else if (!myIsInheritedInitial) {
+          // set only if previously was not inherited (and, so, we must mark it as inherited)
+          // https://youtrack.jetbrains.com/issue/IDEA-162844
+          scheme.setAttributes(key, USE_INHERITED_MARKER);
+        }
+      }
+      else {
+        scheme.setAttributes(key, isInherited() ? USE_INHERITED_MARKER : getTextAttributes());
+      }
     }
 
     @Override
@@ -865,11 +878,6 @@ public class ColorAndFontOptions extends SearchableConfigurable.Parent.Abstract 
     @Override
     public Pair<ColorSettingsPage,AttributesDescriptor> getBaseAttributeDescriptor() {
       return myBaseAttributeDescriptor;
-    }
-
-    @Override
-    public void setInherited(boolean isInherited) {
-      super.setInherited(isInherited);
     }
   }
 
@@ -1174,7 +1182,7 @@ public class ColorAndFontOptions extends SearchableConfigurable.Parent.Abstract 
         if (myParentScheme instanceof AbstractColorsScheme) {
           TextAttributes ownAttrs = ((AbstractColorsScheme)myParentScheme).getDirectlyDefinedAttributes(key);
           if (ownAttrs != null) {
-            return ownAttrs.isFallbackEnabled();
+            return ownAttrs == TextAttributes.USE_INHERITED_MARKER;
           }
         }
         TextAttributes attributes = getAttributes(key);

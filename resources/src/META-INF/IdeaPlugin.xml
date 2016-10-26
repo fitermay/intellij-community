@@ -46,7 +46,8 @@
 
   <application-components>
     <component>
-      <implementation-class>com.intellij.openapi.vfs.impl.jrt.JrtFileSystem</implementation-class>
+      <interface-class>com.intellij.openapi.vfs.jrt.JrtFileSystem</interface-class>
+      <implementation-class>com.intellij.openapi.vfs.impl.jrt.JrtFileSystemImpl</implementation-class>
     </component>
     <component>
       <implementation-class>com.intellij.util.xml.impl.JavaDomApplicationComponent</implementation-class>
@@ -71,8 +72,13 @@
       <implementation-class>com.intellij.execution.scratch.JavaScratchCompilationSupport</implementation-class>
     </component>
     <component>
-      <implementation-class>com.intellij.codeInsight.daemon.impl.ParameterHintsPassFactory</implementation-class>
+      <implementation-class>com.intellij.codeInsight.hints.ParameterHintsPassFactory</implementation-class>
       <skipForDefaultProject/>
+    </component>
+
+    <component>
+      <interface-class>com.intellij.compiler.CompilerReferenceService</interface-class>
+      <implementation-class>com.intellij.compiler.backwardRefs.CompilerReferenceServiceImpl</implementation-class>
     </component>
   </project-components>
 
@@ -348,7 +354,6 @@
 
     <codeInsight.containerProvider implementation="com.intellij.codeInsight.JavaContainerProvider" id="JAVA"/>
 
-    <codeInsight.lineMarkerProvider language="" implementationClass="com.intellij.ui.ColorLineMarkerProvider"/>
     <!--<expectedTypesProvider implementation="com.intellij.codeInsight.JavaExpectedTypesProvider"/>-->
 
     <customPropertyScopeProvider implementation="com.intellij.psi.impl.search.SimpleAccessorScopeProvider"/>
@@ -451,8 +456,6 @@
 
     <applicationService serviceInterface="com.intellij.codeInsight.TestFrameworks"
                         serviceImplementation="com.intellij.codeInsight.TestFrameworksImpl"/>
-
-    <applicationService serviceImplementation="com.intellij.codeInsight.daemon.impl.ParameterHintsPresentationManager"/>
 
     <projectService serviceInterface="com.intellij.execution.testDiscovery.JavaAutoRunManager"
                     serviceImplementation="com.intellij.execution.testDiscovery.JavaAutoRunManager"/>
@@ -758,7 +761,7 @@
     <localInspection groupPath="Java" language="JAVA" shortName="Convert2Lambda" displayName="Anonymous type can be replaced with lambda"
                      groupKey="group.names.language.level.specific.issues.and.migration.aids" groupBundle="messages.InspectionsBundle" enabledByDefault="true" level="WARNING"
                      implementationClass="com.intellij.codeInspection.AnonymousCanBeLambdaInspection" />
-    <localInspection groupPath="Java" language="JAVA" shortName="Convert2streamapi" displayName="foreach loop can be collapsed with Stream API"
+    <localInspection groupPath="Java" language="JAVA" shortName="Convert2streamapi" displayName="Loop can be collapsed with Stream API"
                      groupKey="group.names.language.level.specific.issues.and.migration.aids" groupBundle="messages.InspectionsBundle" enabledByDefault="true" level="INFORMATION"
                      implementationClass="com.intellij.codeInspection.streamMigration.StreamApiMigrationInspection"/>
     <localInspection groupPath="Java" language="JAVA" shortName="Anonymous2MethodRef" displayName="Anonymous type can be replaced with method reference"
@@ -814,11 +817,29 @@
                      groupKey="group.names.performance.issues" enabledByDefault="false" level="WARNING"
                      implementationClass="com.intellij.codeInspection.CollectionAddAllCanBeReplacedWithConstructorInspection"
                      displayName="Collection.addAll() can be replaced with parametrized constructor"/>
+    <localInspection groupPath="Java" language="JAVA" shortName="AnonymousHasLambdaAlternative" displayName="Anonymous type can be replaced with lambda using factory method or special constructor"
+                     groupKey="group.names.language.level.specific.issues.and.migration.aids" groupBundle="messages.InspectionsBundle" enabledByDefault="true" level="WARNING"
+                     implementationClass="com.intellij.codeInspection.AnonymousHasLambdaAlternativeInspection" />
     <localInspection groupPath="Java" language="JAVA" shortName="Java8CollectionsApi"
                      groupBundle="messages.InspectionsBundle"
                      groupKey="group.names.language.level.specific.issues.and.migration.aids" enabledByDefault="true" level="WARNING"
                      implementationClass="com.intellij.codeInspection.java18api.Java8CollectionsApiInspection"
-                     displayName="Collection usage can be simplified in Java 8"/>
+                     displayName="Map.putIfAbsent() can be used"/>
+    <localInspection groupPath="Java" language="JAVA" shortName="Java8ListSort"
+                     groupBundle="messages.InspectionsBundle"
+                     groupKey="group.names.language.level.specific.issues.and.migration.aids" enabledByDefault="true" level="WARNING"
+                     implementationClass="com.intellij.codeInspection.java18api.Java8ListSortInspection"
+                     displayName="Collections.sort() can be replaced with List.sort()"/>
+    <localInspection groupPath="Java" language="JAVA" shortName="Java8CollectionRemoveIf"
+                     groupBundle="messages.InspectionsBundle"
+                     groupKey="group.names.language.level.specific.issues.and.migration.aids" enabledByDefault="true" level="WARNING"
+                     implementationClass="com.intellij.codeInspection.java18api.Java8CollectionRemoveIfInspection"
+                     displayName="Loop can be replaced with Collection.removeIf()"/>
+    <localInspection groupPath="Java" language="JAVA" shortName="Java8ReplaceMapGet"
+                     groupBundle="messages.InspectionsBundle"
+                     groupKey="group.names.language.level.specific.issues.and.migration.aids" enabledByDefault="true" level="WARNING"
+                     implementationClass="com.intellij.codeInspection.java18api.Java8ReplaceMapGetInspection"
+                     displayName="Simplifiable conditional usage of Map.get()"/>
     <localInspection groupPath="Java" language="JAVA" shortName="SimplifyStreamApiCallChains"
                      groupBundle="messages.InspectionsBundle"
                      groupKey="group.names.declaration.redundancy" enabledByDefault="true" level="WARNING"
@@ -855,6 +876,10 @@
     </intentionAction>
     <intentionAction>
       <className>com.intellij.codeInsight.intention.impl.MergeFilterChainAction</className>
+      <category>Java/Streams</category>
+    </intentionAction>
+    <intentionAction>
+      <className>com.intellij.codeInsight.intention.impl.InlineStreamMapAction</className>
       <category>Java/Streams</category>
     </intentionAction>
     <intentionAction>
@@ -1133,6 +1158,7 @@
 
     <lang.foldingBuilder language="JAVA" implementationClass="com.intellij.codeInsight.folding.impl.JavaFoldingBuilder"/>
 
+    <parameterHintsProvider language="JAVA" implementationClass="com.intellij.codeInsight.hints.JavaInlayParameterHintsProvider"/>
     <codeInsight.parameterInfo language="JAVA" implementationClass="com.intellij.codeInsight.hint.api.impls.MethodParameterInfoHandler"/>
     <codeInsight.parameterInfo language="JAVA" implementationClass="com.intellij.codeInsight.hint.api.impls.ReferenceParameterInfoHandler"/>
     <codeInsight.parameterInfo language="JAVA"
@@ -1523,8 +1549,10 @@
     <renamePsiElementProcessor implementation="com.intellij.refactoring.rename.RenameJavaClassProcessor"/>
     <renamePsiElementProcessor implementation="com.intellij.refactoring.rename.RenameJavaMethodProcessor" id="javamethod"/>
     <renamePsiElementProcessor implementation="com.intellij.refactoring.rename.RenameJavaVariableProcessor" id="javaVariable"/>
-    <renameInputValidator implementation="com.intellij.refactoring.rename.PsiPackageRenameValidator"/>
     <renamePsiElementProcessor implementation="com.intellij.refactoring.rename.RenameAliasingPomTargetProcessor"/>
+
+    <renameInputValidator implementation="com.intellij.refactoring.rename.PsiPackageRenameValidator"/>
+    <renameInputValidator implementation="com.intellij.refactoring.rename.JavaModuleRenameValidator"/>
 
     <automaticRenamerFactory implementation="com.intellij.refactoring.rename.naming.AutomaticVariableRenamerFactory"/>
     <automaticRenamerFactory implementation="com.intellij.refactoring.rename.naming.AutomaticParametersRenamerFactory"/>
@@ -1580,6 +1608,7 @@
     <fileBasedIndex implementation="com.intellij.psi.impl.java.JavaFunctionalExpressionIndex"/>
     <fileBasedIndex implementation="com.intellij.codeInspection.bytecodeAnalysis.BytecodeAnalysisIndex"/>
     <fileBasedIndex implementation="com.intellij.psi.RefQueueIndex"/>
+    <fileBasedIndex implementation="com.intellij.psi.impl.java.stubs.index.JavaAutoModuleNameIndex"/>
 
     <stubElementTypeHolder class="com.intellij.psi.impl.java.stubs.JavaStubElementTypes"/>
 
@@ -1797,6 +1826,8 @@
     <library.javaSourceRootDetector implementation="com.intellij.openapi.roots.ui.configuration.LibraryJavaSourceRootDetector"/>
 
     <fileBasedIndex implementation="com.intellij.psi.impl.search.JavaNullMethodArgumentIndex"/>
+
+    <codeUsageScopeOptimizer implementation="com.intellij.compiler.JavaCompilerReferencesCodeUsageScopeOptimizer"/>
   </extensions>
 
   <actions>
@@ -1814,9 +1845,6 @@
     </action>
     <action id="ShowRecentTests" class="com.intellij.testIntegration.ShowRecentTests">
       <keyboard-shortcut first-keystroke="control shift SEMICOLON" keymap="$default"/>
-    </action>
-    <action id="ReportMissingOrExcessiveInlineHint" class="com.intellij.reporting.ReportMissingOrExcessiveInlineHint">
-      <add-to-group group-id="EditorPopupMenu"/>
     </action>
     <action class="com.intellij.execution.testDiscovery.ConfigureTestDiscoveryAction" internal="true" id="TestDiscoveryIndexChooser" text="Choose external test discovery indices">
       <add-to-group group-id="Internal" anchor="last"/>

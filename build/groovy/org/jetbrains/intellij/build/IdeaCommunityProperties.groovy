@@ -17,9 +17,6 @@ package org.jetbrains.intellij.build
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
-import org.jetbrains.intellij.build.impl.PlatformLayout
-
-import java.util.function.Consumer
 
 /**
  * @author nik
@@ -41,7 +38,7 @@ class IdeaCommunityProperties extends BaseIdeaProperties {
                                                   ["jps-model-impl", "jps-model-serialization"]
     productLayout.additionalPlatformJars.put("resources.jar", "community-resources")
     productLayout.bundledPluginModules = BUNDLED_PLUGIN_MODULES
-    productLayout.mainModule = "community-main"
+    productLayout.mainModules = ["community-main"]
     productLayout.allNonTrivialPlugins = CommunityRepositoryModules.COMMUNITY_REPOSITORY_PLUGINS + [
       CommunityRepositoryModules.androidPlugin([:]),
       CommunityRepositoryModules.groovyPlugin([])
@@ -80,6 +77,12 @@ class IdeaCommunityProperties extends BaseIdeaProperties {
       @Override
       String uninstallFeedbackPageUrl(ApplicationInfoProperties applicationInfo) {
         "https://www.jetbrains.com/idea/uninstall/?edition=IC-${applicationInfo.majorVersion}.${applicationInfo.minorVersion}"
+      }
+
+      @Override
+      String linkToJRE64(BuildContext buildContext) {
+        def versionString = buildContext.productProperties.baseArtifactName(buildContext.applicationInfo, buildContext.buildNumber)
+        return "https://download.jetbrains.com/idea/jre64-for-${versionString}.tar.gz"
       }
     }
   }

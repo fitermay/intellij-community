@@ -97,7 +97,7 @@ public class VcsLogManager implements Disposable {
   public void scheduleInitialization() {
     if (!myInitialized) {
       myInitialized = true;
-      myLogData.refreshCompletely();
+      myLogData.initialize();
     }
   }
 
@@ -112,8 +112,8 @@ public class VcsLogManager implements Disposable {
   }
 
   @NotNull
-  public JComponent createLogPanel(@Nullable String contentTabName) {
-    VcsLogUiImpl ui = createLogUi(VcsLogTabsProperties.MAIN_LOG_ID, contentTabName, null);
+  public JComponent createLogPanel(@NotNull String logId, @Nullable String contentTabName) {
+    VcsLogUiImpl ui = createLogUi(logId, contentTabName, null);
     return new VcsLogPanel(this, ui);
   }
 

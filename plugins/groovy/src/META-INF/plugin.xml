@@ -85,6 +85,7 @@
     <extensionPoint name="mvc.runCommandHandler" interface="org.jetbrains.plugins.groovy.mvc.actions.MvcRunCommandActionHandler"/>
     <extensionPoint name="gdslScriptProvider" interface="org.jetbrains.plugins.groovy.dsl.GdslScriptProvider"/>
     <extensionPoint name="expectedPackageNameProvider" interface="org.jetbrains.plugins.groovy.lang.resolve.ExpectedPackageNameProvider"/>
+    <extensionPoint name="delegatesToProvider" interface="org.jetbrains.plugins.groovy.lang.resolve.delegatesTo.GrDelegatesToProvider"/>
   </extensionPoints>
 
   <extensions defaultExtensionNs="org.intellij.groovy">
@@ -118,7 +119,7 @@
     <closureMissingMethodContributor implementation="org.jetbrains.plugins.groovy.lang.resolve.PluginXmlClosureMemberContributor"/>
 
     <astTransformationSupport implementation="org.jetbrains.plugins.groovy.lang.resolve.ast.AutoExternalizeContributor"/>
-    <astTransformationSupport implementation="org.jetbrains.plugins.groovy.lang.resolve.ast.AutoCloneContributor"/>
+    <astTransformationSupport implementation="org.jetbrains.plugins.groovy.transformations.impl.autoClone.AutoCloneTransformationSupport"/>
     <astTransformationSupport implementation="org.jetbrains.plugins.groovy.lang.resolve.ast.ConstructorAnnotationsProcessor"/>
     <astTransformationSupport implementation="org.jetbrains.plugins.groovy.lang.resolve.ast.InheritConstructorContributor"/>
     <astTransformationSupport implementation="org.jetbrains.plugins.groovy.lang.resolve.ast.builder.strategy.DefaultBuilderStrategySupport"/>
@@ -248,6 +249,7 @@
     <expectedPackageNameProvider implementation="org.jetbrains.plugins.groovy.lang.resolve.DefaultExpectedPackageNameProvider"
                                  order="last"/>
     <importContributor implementation="org.jetbrains.plugins.groovy.lang.resolve.DefaultImportContributor"/>
+    <delegatesToProvider implementation="org.jetbrains.plugins.groovy.lang.resolve.delegatesTo.DefaultDelegatesToProvider" id="default"/>
   </extensions>
 
   <extensions defaultExtensionNs="com.intellij.properties">
@@ -668,11 +670,6 @@
                      bundle="org.jetbrains.plugins.groovy.codeInspection.GroovyInspectionBundle"
                      key="unused.inc.dec" groupKey="groovy.dfa.issues" enabledByDefault="true" level="WARNING"
                      implementationClass="org.jetbrains.plugins.groovy.codeInspection.confusing.GrUnusedIncDecInspection"/>
-    <localInspection language="Groovy" groupPath="Groovy"
-                     bundle="org.jetbrains.plugins.groovy.codeInspection.GroovyInspectionBundle"
-                     key="unused.default.parameter" groupName="Declaration redundancy"
-                     level="WARNING" cleanupTool="true"
-                     implementationClass="org.jetbrains.plugins.groovy.codeInspection.unused.defaultParameter.GrUnusedDefaultParameterInspection"/>
     <localInspection language="Groovy" groupPath="Groovy" shortName="GroovyVariableNotAssigned"
                      bundle="org.jetbrains.plugins.groovy.codeInspection.GroovyInspectionBundle"
                      key="unassigned.access" groupKey="groovy.dfa.issues" enabledByDefault="true" level="WARNING"

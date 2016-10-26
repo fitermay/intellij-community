@@ -107,12 +107,10 @@
     <colorAndFontPanelFactory implementation="com.intellij.openapi.diff.impl.settings.DiffColorsPageFactory"/>
     <colorAndFontDescriptorProvider implementation="com.intellij.openapi.diff.impl.settings.DiffColorsPageFactory"/>
 
-    <fileTypeFactory implementation="com.intellij.diff.contents.DiffPsiFileType$TypeFactory"/>
-    <lang.substitutor language="TEXT" implementationClass="com.intellij.diff.contents.DiffPsiFileType$Substitutor" order="first"/>
-    <daemon.highlightInfoFilter implementation="com.intellij.diff.contents.DiffPsiFileType$HighlightFilter"/>
-    <daemon.intentionActionFilter implementation="com.intellij.diff.contents.DiffPsiFileType$IntentionFilter"/>
+    <daemon.highlightInfoFilter implementation="com.intellij.diff.contents.DiffPsiFileSupport$HighlightFilter"/>
+    <daemon.intentionActionFilter implementation="com.intellij.diff.contents.DiffPsiFileSupport$IntentionFilter"/>
     <defaultHighlightingSettingProvider id="GeneratedSourcesHighlightingSettingProvider"
-                                        implementation="com.intellij.diff.contents.DiffPsiFileType$HighlightingSettingProvider"/>
+                                        implementation="com.intellij.diff.contents.DiffPsiFileSupport$HighlightingSettingProvider"/>
 
     <applicationService serviceInterface="com.intellij.ui.SystemNotifications"
                         serviceImplementation="com.intellij.ui.SystemNotificationsImpl"/>
@@ -153,8 +151,6 @@
                         serviceImplementation="com.intellij.reporting.FreezeLoggerImpl"/>
     <applicationService serviceInterface="com.intellij.featureStatistics.ProductivityFeaturesRegistry"
                         serviceImplementation="com.intellij.featureStatistics.ProductivityFeaturesRegistryImpl"/>
-    <applicationService serviceInterface="com.intellij.util.InstanceofCheckerGenerator"
-                        serviceImplementation="com.intellij.util.InstanceofCheckerGenerator"/>
     <applicationService serviceInterface="com.intellij.internal.psiView.PsiViewerSettings"
                         serviceImplementation="com.intellij.internal.psiView.PsiViewerSettings"/>
 
@@ -218,6 +214,9 @@
     <applicationService serviceImplementation="com.intellij.ide.ui.UISettings"/>
 
     <applicationService serviceInterface="com.intellij.ide.UiActivityMonitor" serviceImplementation="com.intellij.ide.UiActivityMonitorImpl"/>
+
+    <applicationService serviceInterface="com.intellij.execution.process.ProcessHandlerFactory"
+                        serviceImplementation="com.intellij.execution.process.ProcessHandlerFactoryImpl" />
 
     <projectService serviceInterface="com.intellij.openapi.vfs.ReadonlyStatusHandler"
                     serviceImplementation="com.intellij.openapi.vcs.readOnlyHandler.ReadonlyStatusHandlerImpl"/>
@@ -307,7 +306,6 @@
     <actionFromOptionDescriptorProvider implementation="com.intellij.ide.plugins.InstalledPluginsManagerMain$PluginsActionFromOptionDescriptorProvider"/>
     <applicationConfigurable parentId="preferences.general" instance="com.intellij.util.net.HttpProxyConfigurable" id="http.proxy" displayName="HTTP Proxy"/>
     <applicationConfigurable groupId="tools" displayName="Server Certificates" id="http.certificates" instance="com.intellij.util.net.ssl.CertificateConfigurable"/>
-    <!--<applicationConfigurable instance="com.intellij.ui.switcher.QuickAccessConfigurable"/>-->
 
     <fileTypeFactory implementation="com.intellij.openapi.fileTypes.impl.PlatformFileTypeFactory"/>
     <fileTypeFactory implementation="com.intellij.openapi.fileTypes.impl.InternalFileTypeFactory"/>
@@ -328,6 +326,7 @@
                         serviceImplementation="com.intellij.openapi.actionSystem.impl.AbbreviationManagerImpl"/>
 
     <applicationService serviceImplementation="com.intellij.openapi.editor.ex.EditorSettingsExternalizable"/>
+    <applicationService serviceImplementation="com.intellij.codeInsight.hints.settings.ParameterNameHintsSettings"/>
     <applicationService serviceImplementation="com.intellij.openapi.keymap.KeyboardSettingsExternalizable"/>
     <applicationService serviceImplementation="com.intellij.openapi.editor.SpellCheckingEditorCustomizationProvider"/>
 
@@ -335,8 +334,6 @@
     <applicationService serviceInterface="com.intellij.openapi.ui.popup.StackingPopupDispatcher" serviceImplementation="com.intellij.ui.popup.StackingPopupDispatcherImpl"/>
 
     <applicationService serviceImplementation="com.intellij.ide.RemoteDesktopDetector"/>
-
-    <projectService serviceImplementation="com.intellij.ui.switcher.SwitchManager"/>
 
     <fileEditorProvider implementation="com.intellij.openapi.fileEditor.impl.http.HttpFileEditorProvider"/>
     <editorActionHandler action="EditorEscape" implementationClass="com.intellij.codeInsight.hint.EscapeHandler" id="hide-hints"/>

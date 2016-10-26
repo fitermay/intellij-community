@@ -35,8 +35,6 @@ import com.intellij.xdebugger.impl.ui.XDebuggerExpressionComboBox;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.ArrayList;
@@ -219,9 +217,7 @@ public class XLightBreakpointPropertiesPanel implements XSuspendPolicyPanel.Dele
   }
 
   public void saveProperties() {
-    for (XBreakpointPropertiesSubPanel panel : mySubPanels) {
-      panel.saveProperties();
-    }
+    mySubPanels.forEach(XBreakpointPropertiesSubPanel::saveProperties);
 
     if (myConditionComboBox != null) {
       XExpression expression = myConditionComboBox.getExpression();
@@ -238,9 +234,7 @@ public class XLightBreakpointPropertiesPanel implements XSuspendPolicyPanel.Dele
   }
 
   public void loadProperties() {
-    for (XBreakpointPropertiesSubPanel panel : mySubPanels) {
-      panel.loadProperties();
-    }
+    mySubPanels.forEach(XBreakpointPropertiesSubPanel::loadProperties);
 
     if (myConditionComboBox != null) {
       XExpression condition = myBreakpoint.getConditionExpressionInt();
@@ -274,8 +268,6 @@ public class XLightBreakpointPropertiesPanel implements XSuspendPolicyPanel.Dele
 
   public void dispose() {
     myActionsPanel.dispose();
-    for (XBreakpointCustomPropertiesPanel panel : myCustomPanels) {
-      panel.dispose();
-    }
+    myCustomPanels.forEach(XBreakpointCustomPropertiesPanel::dispose);
   }
 }

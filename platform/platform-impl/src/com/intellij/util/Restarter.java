@@ -15,8 +15,9 @@
  */
 package com.intellij.util;
 
+import com.intellij.execution.process.UnixProcessManager;
+import com.intellij.ide.actions.CreateDesktopEntryAction;
 import com.intellij.jna.JnaLoader;
-import com.intellij.openapi.application.ApplicationNamesInfo;
 import com.intellij.openapi.application.PathManager;
 import com.intellij.openapi.util.SystemInfo;
 import com.intellij.openapi.util.io.FileUtilRt;
@@ -34,25 +35,25 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Locale;
 
 public class Restarter {
   private Restarter() { }
 
-  private static File getLauncherScript() {
-    String name = ApplicationNamesInfo.getInstance().getProductName().toLowerCase(Locale.US);
-    return new File(PathManager.getBinPath(), name + ".sh");
-  }
-
   public static boolean isSupported() {
     if (SystemInfo.isWindows) {
-      return JnaLoader.isLoaded() && new File(PathManager.getBinPath(), "restarter.exe").exists();
+      return JnaLoader.isLoaded() &&
+             new File(PathManager.getBinPath(), "restarter.exe").exists();
     }
+
     if (SystemInfo.isMac) {
-      return PathManager.getHomePath().contains(".app") && new File(PathManager.getBinPath(), "restarter").canExecute();
+      return PathManager.getHomePath().contains(".app") &&
+             new File(PathManager.getBinPath(), "restarter").canExecute();
     }
+
     if (SystemInfo.isUnix) {
-      return getLauncherScript().canExecute() && new File(PathManager.getBinPath(), "restart.py").canExecute();
+      return UnixProcessManager.getCurrentProcessId() > 0 &&
+             CreateDesktopEntryAction.getLauncherScript() != null &&
+             new File(PathManager.getBinPath(), "restart.py").canExecute();
     }
 
     return false;
@@ -139,10 +140,15 @@ public class Restarter {
   }
 
   private static void restartOnUnix(String... beforeRestart) throws IOException {
-    File launcherScript = getLauncherScript();
-    if (!launcherScript.exists()) throw new IOException("Launcher script not found: " + launcherScript);
+    String launcherScript = CreateDesktopEntryAction.getLauncherScript();
+    if (launcherScript == null) throw new IOException("Launcher script not found in " + PathManager.getBinPath());
+
+    int pid = UnixProcessManager.getCurrentProcessId();
+    if (pid <= 0) throw new IOException("Invalid process ID: " + pid);
+
     doScheduleRestart(new File(PathManager.getBinPath(), "restart.py"), commands -> {
-      commands.add(launcherScript.getPath());
+      commands.add(String.valueOf(pid));
+      commands.add(launcherScript);
       Collections.addAll(commands, beforeRestart);
     });
   }
@@ -177,6 +183,7 @@ public class Restarter {
     return copy;
   }
 
+  @SuppressWarnings("SameParameterValue")
   private interface Kernel32 extends StdCallLibrary {
     int GetCurrentProcessId();
     WString GetCommandLineW();

@@ -23,6 +23,7 @@ import com.intellij.diff.SuppressiveDiffTool;
 import com.intellij.diff.comparison.ByWord;
 import com.intellij.diff.comparison.ComparisonManager;
 import com.intellij.diff.comparison.ComparisonPolicy;
+import com.intellij.diff.comparison.ComparisonUtil;
 import com.intellij.diff.contents.DiffContent;
 import com.intellij.diff.contents.DocumentContent;
 import com.intellij.diff.contents.EmptyContent;
@@ -30,6 +31,7 @@ import com.intellij.diff.contents.FileContent;
 import com.intellij.diff.fragments.DiffFragment;
 import com.intellij.diff.fragments.LineFragment;
 import com.intellij.diff.fragments.MergeLineFragment;
+import com.intellij.diff.fragments.MergeWordFragment;
 import com.intellij.diff.impl.DiffSettingsHolder;
 import com.intellij.diff.impl.DiffSettingsHolder.DiffSettings;
 import com.intellij.diff.requests.ContentDiffRequest;
@@ -467,23 +469,26 @@ public class DiffUtil {
                                         boolean equalSeparators,
                                         @Nullable Editor editor) {
     if (content instanceof EmptyContent) return null;
+    DocumentContent documentContent = (DocumentContent)content;
 
-    Charset charset = equalCharsets ? null : ((DocumentContent)content).getCharset();
-    LineSeparator separator = equalSeparators ? null : ((DocumentContent)content).getLineSeparator();
+    Charset charset = equalCharsets ? null : documentContent.getCharset();
+    Boolean bom = equalCharsets ? null : documentContent.hasBom();
+    LineSeparator separator = equalSeparators ? null : documentContent.getLineSeparator();
     boolean isReadOnly = editor == null || editor.isViewer() || !canMakeWritable(editor.getDocument());
 
-    return createTitle(title, charset, separator, isReadOnly);
+    return createTitle(title, separator, charset, bom, isReadOnly);
   }
 
   @NotNull
   public static JComponent createTitle(@NotNull String title) {
-    return createTitle(title, null, null, false);
+    return createTitle(title, null, null, null, false);
   }
 
   @NotNull
   public static JComponent createTitle(@NotNull String title,
-                                       @Nullable Charset charset,
                                        @Nullable LineSeparator separator,
+                                       @Nullable Charset charset,
+                                       @Nullable Boolean bom,
                                        boolean readOnly) {
     if (readOnly) title += " " + DiffBundle.message("diff.content.read.only.content.title.suffix");
 
@@ -493,13 +498,13 @@ public class DiffUtil {
     if (charset != null && separator != null) {
       JPanel panel2 = new JPanel();
       panel2.setLayout(new BoxLayout(panel2, BoxLayout.X_AXIS));
-      panel2.add(createCharsetPanel(charset));
+      panel2.add(createCharsetPanel(charset, bom));
       panel2.add(Box.createRigidArea(new Dimension(4, 0)));
       panel2.add(createSeparatorPanel(separator));
       panel.add(panel2, BorderLayout.EAST);
     }
     else if (charset != null) {
-      panel.add(createCharsetPanel(charset), BorderLayout.EAST);
+      panel.add(createCharsetPanel(charset, bom), BorderLayout.EAST);
     }
     else if (separator != null) {
       panel.add(createSeparatorPanel(separator), BorderLayout.EAST);
@@ -508,8 +513,13 @@ public class DiffUtil {
   }
 
   @NotNull
-  private static JComponent createCharsetPanel(@NotNull Charset charset) {
-    JLabel label = new JLabel(charset.displayName());
+  private static JComponent createCharsetPanel(@NotNull Charset charset, @Nullable Boolean bom) {
+    String text = charset.displayName();
+    if (bom != null && bom) {
+      text += " BOM";
+    }
+
+    JLabel label = new JLabel(text);
     // TODO: specific colors for other charsets
     if (charset.equals(Charset.forName("UTF-8"))) {
       label.setForeground(JBColor.BLUE);
@@ -1061,6 +1071,36 @@ public class DiffUtil {
     return fragment.getStartLine(side) == fragment.getEndLine(side);
   }
 
+  @NotNull
+  public static MergeConflictType getWordMergeType(@NotNull MergeWordFragment fragment,
+                                                   @NotNull List<? extends CharSequence> texts,
+                                                   @NotNull ComparisonPolicy policy) {
+    return getMergeType((side) -> isWordMergeIntervalEmpty(fragment, side),
+                        (side1, side2) -> compareWordMergeContents(fragment, texts, policy, side1, side2));
+  }
+
+  private static boolean compareWordMergeContents(@NotNull MergeWordFragment fragment,
+                                                  @NotNull List<? extends CharSequence> texts,
+                                                  @NotNull ComparisonPolicy policy,
+                                                  @NotNull ThreeSide side1,
+                                                  @NotNull ThreeSide side2) {
+    int start1 = fragment.getStartOffset(side1);
+    int end1 = fragment.getEndOffset(side1);
+    int start2 = fragment.getStartOffset(side2);
+    int end2 = fragment.getEndOffset(side2);
+
+    CharSequence document1 = side1.select(texts);
+    CharSequence document2 = side2.select(texts);
+
+    CharSequence content1 = document1.subSequence(start1, end1);
+    CharSequence content2 = document2.subSequence(start2, end2);
+    return ComparisonUtil.isEquals(content1, content2, policy);
+  }
+
+  private static boolean isWordMergeIntervalEmpty(@NotNull MergeWordFragment fragment, @NotNull ThreeSide side) {
+    return fragment.getStartOffset(side) == fragment.getEndOffset(side);
+  }
+
   //
   // Writable
   //
@@ -1177,23 +1217,30 @@ public class DiffUtil {
 
     Component component = window;
     while (component != null) {
-      if (component instanceof Window) closeWindow((Window)component, modalOnly);
+      if (component instanceof Window) {
+        boolean isClosed = closeWindow((Window)component, modalOnly);
+        if (!isClosed) break;
+      }
 
       component = recursive ? component.getParent() : null;
     }
   }
 
-  public static void closeWindow(@NotNull Window window, boolean modalOnly) {
-    if (window instanceof IdeFrameImpl) return;
-    if (modalOnly && window instanceof Frame) return;
+  /**
+   * @return whether window was closed
+   */
+  private static boolean closeWindow(@NotNull Window window, boolean modalOnly) {
+    if (window instanceof IdeFrameImpl) return false;
+    if (modalOnly && window instanceof Frame) return false;
 
     if (window instanceof DialogWrapperDialog) {
       ((DialogWrapperDialog)window).getDialogWrapper().doCancelAction();
-      return;
+      return !window.isVisible();
     }
 
     window.setVisible(false);
     window.dispose();
+    return true;
   }
 
   //

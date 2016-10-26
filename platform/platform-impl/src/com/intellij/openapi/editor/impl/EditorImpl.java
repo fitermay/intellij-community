@@ -33,6 +33,8 @@ import com.intellij.openapi.actionSystem.ex.ActionManagerEx;
 import com.intellij.openapi.actionSystem.impl.MouseGestureManager;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
+import com.intellij.openapi.application.TransactionGuard;
+import com.intellij.openapi.application.TransactionGuardImpl;
 import com.intellij.openapi.command.CommandProcessor;
 import com.intellij.openapi.command.UndoConfirmationPolicy;
 import com.intellij.openapi.diagnostic.Logger;
@@ -97,7 +99,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.TestOnly;
 
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.Timer;
 import javax.swing.border.Border;
@@ -119,7 +120,6 @@ import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.text.AttributedCharacterIterator;
@@ -1000,8 +1000,8 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
             }
             else {
               final Dimension d = c.getPreferredSize();
-              final MyScrollBar scrollBar = getVerticalScrollBar();
-              c.setBounds(r.width - d.width - scrollBar.getWidth() - 20, 20, d.width, d.height);
+              int rightInsets = getVerticalScrollBar().getWidth() + (isMirrored() ? myGutterComponent.getWidth() : 0);
+              c.setBounds(r.width - d.width - rightInsets - 20, 20, d.width, d.height);
             }
           }
         }
@@ -1194,16 +1194,25 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
       return false;
     }
 
-    ActionManagerEx actionManager = ActionManagerEx.getInstanceEx();
-    DataContext dataContext = getDataContext();
+    Graphics graphics = myEditorComponent.getGraphics();
+    if (graphics != null) { // editor component is not showing
+      processKeyTypedImmediately(c, graphics);
+      graphics.dispose();
+    }
 
-    myImmediatePainter.paintCharacter(myEditorComponent.getGraphics(), c);
-
-    actionManager.fireBeforeEditorTyping(c, dataContext);
+    ActionManagerEx.getInstanceEx().fireBeforeEditorTyping(c, getDataContext());
     MacUIUtil.hideCursor();
-    EditorActionManager.getInstance().getTypedAction().actionPerformed(this, c, dataContext);
+    processKeyTypedNormally(c);
 
     return true;
+  }
+
+  void processKeyTypedImmediately(char c, Graphics graphics) {
+    myImmediatePainter.paintCharacter(graphics, c);
+  }
+
+  void processKeyTypedNormally(char c) {
+    EditorActionManager.getInstance().getTypedAction().actionPerformed(this, c, getDataContext());
   }
 
   private void fireFocusLost() {
@@ -1968,8 +1977,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
     if (!mySoftWrapModel.isSoftWrappingEnabled() && !myUseNewRendering) {
       mySizeContainer.beforeChange(e);
     }
-
-    myImmediatePainter.beforeUpdate(e);
   }
 
   void invokeDelayedErrorStripeRepaint() {
@@ -1982,8 +1989,6 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
   private void changedUpdate(DocumentEvent e) {
     myDocumentChangeInProgress = false;
     if (myDocument.isInBulkUpdate()) return;
-
-    myImmediatePainter.paintUpdate(myEditorComponent.getGraphics(), e);
 
     if (myErrorStripeNeedsRepaint) {
       myMarkupModel.repaint(e.getOffset(), e.getOffset() + e.getNewLength());
@@ -2025,7 +2030,7 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
       restoreCaretRelativePosition();
     }
 
-    if (EMPTY_CURSOR != null) {
+    if (EMPTY_CURSOR != null && !myIsViewer) {
       myEditorComponent.setCursor(EMPTY_CURSOR);
     }
   }
@@ -2459,21 +2464,26 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
       }
       if (attributes != null && attributes.getEffectColor() != null) {
         int y = visibleLineToY(visibleStartLine) + getAscent() + 1;
+        g.setColor(attributes.getEffectColor());
         if (attributes.getEffectType() == EffectType.WAVE_UNDERSCORE) {
-          EffectPainter.WAVE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(), attributes.getEffectColor());
+          EffectPainter.WAVE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(),
+                                              getColorsScheme().getFont(EditorFontType.PLAIN));
         }
         else if (attributes.getEffectType() == EffectType.BOLD_DOTTED_LINE) {
-          g.setColor(getBackgroundColor(attributes));
-          EffectPainter.BOLD_DOTTED_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(), attributes.getEffectColor());
+          EffectPainter.BOLD_DOTTED_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(),
+                                                     getColorsScheme().getFont(EditorFontType.PLAIN));
         }
         else if (attributes.getEffectType() == EffectType.STRIKEOUT) {
-          EffectPainter.STRIKE_THROUGH.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getCharHeight(), attributes.getEffectColor());
+          EffectPainter.STRIKE_THROUGH.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getCharHeight(),
+                                             getColorsScheme().getFont(EditorFontType.PLAIN));
         }
         else if (attributes.getEffectType() == EffectType.BOLD_LINE_UNDERSCORE) {
-          EffectPainter.BOLD_LINE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(), attributes.getEffectColor());
+          EffectPainter.BOLD_LINE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(),
+                                                   getColorsScheme().getFont(EditorFontType.PLAIN));
         }
         else if (attributes.getEffectType() != EffectType.BOXED) {
-          EffectPainter.LINE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(), attributes.getEffectColor());
+          EffectPainter.LINE_UNDERSCORE.paint((Graphics2D)g, end.x, y - 1, charWidth - 1, getDescent(),
+                                              getColorsScheme().getFont(EditorFontType.PLAIN));
         }
       }
     }
@@ -3571,6 +3581,7 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
 
     if (effectColor != null) {
       final Color savedColor = g.getColor();
+      g.setColor(effectColor);
 
 //      myBorderEffect.flushIfCantProlong(g, this, effectType, effectColor);
       int xEnd = x;
@@ -3586,25 +3597,26 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
       }
 
       if (effectType == EffectType.LINE_UNDERSCORE) {
-        EffectPainter.LINE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(), effectColor);
-        g.setColor(savedColor);
+        EffectPainter.LINE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(),
+                                            getColorsScheme().getFont(EditorFontType.PLAIN));
       }
       else if (effectType == EffectType.BOLD_LINE_UNDERSCORE) {
-        EffectPainter.BOLD_LINE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(), effectColor);
-        g.setColor(savedColor);
+        EffectPainter.BOLD_LINE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(),
+                                                 getColorsScheme().getFont(EditorFontType.PLAIN));
       }
       else if (effectType == EffectType.STRIKEOUT) {
-        EffectPainter.STRIKE_THROUGH.paint((Graphics2D)g, xStart, y, xEnd - xStart, getCharHeight(), effectColor);
-        g.setColor(savedColor);
+        EffectPainter.STRIKE_THROUGH.paint((Graphics2D)g, xStart, y, xEnd - xStart, getCharHeight(),
+                                           getColorsScheme().getFont(EditorFontType.PLAIN));
       }
       else if (effectType == EffectType.WAVE_UNDERSCORE) {
-        EffectPainter.WAVE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(), effectColor);
-        g.setColor(savedColor);
+        EffectPainter.WAVE_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(),
+                                            getColorsScheme().getFont(EditorFontType.PLAIN));
       }
       else if (effectType == EffectType.BOLD_DOTTED_LINE) {
-        g.setColor(getBackgroundColor());
-        EffectPainter.BOLD_DOTTED_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(), effectColor);
+        EffectPainter.BOLD_DOTTED_UNDERSCORE.paint((Graphics2D)g, xStart, y, xEnd - xStart, getDescent(),
+                                                   getColorsScheme().getFont(EditorFontType.PLAIN));
       }
+      g.setColor(savedColor);
     }
 
     return x;
@@ -6712,25 +6724,29 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
 
       final EditorImpl editor = getEditor(source);
       if (action == MOVE && !editor.isViewer() && editor.myDraggedRange != null) {
-        if (!FileDocumentManager.getInstance().requestWriting(editor.getDocument(), editor.getProject())) {
-          return;
-        }
-        CommandProcessor.getInstance().executeCommand(editor.myProject, () -> ApplicationManager.getApplication().runWriteAction(() -> {
-          Document doc = editor.getDocument();
-          doc.startGuardedBlockChecking();
-          try {
-            doc.deleteString(editor.myDraggedRange.getStartOffset(), editor.myDraggedRange.getEndOffset());
-          }
-          catch (ReadOnlyFragmentModificationException e) {
-            EditorActionManager.getInstance().getReadonlyFragmentModificationHandler(doc).handle(e);
-          }
-          finally {
-            doc.stopGuardedBlockChecking();
-          }
-        }), EditorBundle.message("move.selection.command.name"), DND_COMMAND_KEY, UndoConfirmationPolicy.DEFAULT, editor.getDocument());
+        ((TransactionGuardImpl)TransactionGuard.getInstance()).performUserActivity(() -> removeDraggedOutFragment(editor));
       }
 
       editor.clearDnDContext();
+    }
+
+    private static void removeDraggedOutFragment(EditorImpl editor) {
+      if (!FileDocumentManager.getInstance().requestWriting(editor.getDocument(), editor.getProject())) {
+        return;
+      }
+      CommandProcessor.getInstance().executeCommand(editor.myProject, () -> ApplicationManager.getApplication().runWriteAction(() -> {
+        Document doc = editor.getDocument();
+        doc.startGuardedBlockChecking();
+        try {
+          doc.deleteString(editor.myDraggedRange.getStartOffset(), editor.myDraggedRange.getEndOffset());
+        }
+        catch (ReadOnlyFragmentModificationException e) {
+          EditorActionManager.getInstance().getReadonlyFragmentModificationHandler(doc).handle(e);
+        }
+        finally {
+          doc.stopGuardedBlockChecking();
+        }
+      }), EditorBundle.message("move.selection.command.name"), DND_COMMAND_KEY, UndoConfirmationPolicy.DEFAULT, editor.getDocument());
     }
   }
 
@@ -7147,7 +7163,13 @@ public final class EditorImpl extends UserDataHolderBase implements EditorEx, Hi
         event.getArea() == EditorMouseEventArea.EDITING_AREA &&
         event.getMouseEvent().isPopupTrigger() &&
         !event.isConsumed()) {
-      AnAction action = CustomActionsSchema.getInstance().getCorrectedAction(myContextMenuGroupId);
+      String contextMenuGroupId = myContextMenuGroupId;
+      Inlay inlay = myInlayModel.getElementAt(event.getMouseEvent().getPoint());
+      if (inlay != null) {
+        String inlayContextMenuGroupId = inlay.getRenderer().getContextMenuGroupId();
+        if (inlayContextMenuGroupId != null) contextMenuGroupId = inlayContextMenuGroupId;
+      }
+      AnAction action = CustomActionsSchema.getInstance().getCorrectedAction(contextMenuGroupId);
       if (action instanceof ActionGroup) {
         ActionPopupMenu popupMenu = ActionManager.getInstance().createActionPopupMenu(ActionPlaces.EDITOR_POPUP, (ActionGroup)action);
         MouseEvent e = event.getMouseEvent();

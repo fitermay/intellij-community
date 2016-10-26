@@ -22,8 +22,10 @@ import com.intellij.execution.runners.ExecutionEnvironment;
 import com.intellij.openapi.compiler.CompileScope;
 import com.intellij.openapi.compiler.CompileStatusNotification;
 import com.intellij.openapi.compiler.CompilerManager;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.packaging.artifacts.Artifact;
 import com.intellij.packaging.impl.compiler.ArtifactCompileScope;
@@ -45,6 +47,8 @@ import java.util.stream.Stream;
  * @since 5/11/2016
  */
 public class InternalProjectTaskRunner extends ProjectTaskRunner {
+  private static final Logger LOG = Logger.getInstance(InternalProjectTaskRunner.class);
+
   @Override
   public void run(@NotNull Project project,
                   @NotNull ProjectTaskContext context,
@@ -86,42 +90,88 @@ public class InternalProjectTaskRunner extends ProjectTaskRunner {
                                            @Nullable CompileStatusNotification compileNotification,
                                            @NotNull Map<Class<? extends ProjectTask>, List<ProjectTask>> tasksMap) {
     Collection<? extends ProjectTask> buildTasks = tasksMap.get(ModuleBuildTask.class);
+    if (ContainerUtil.isEmpty(buildTasks)) return;
+    ModulesBuildSettings modulesBuildSettings = assembleModulesBuildSettings(buildTasks);
 
-
-    if (!ContainerUtil.isEmpty(buildTasks)) {
-      List<Module> toMake = new SmartList<>();
-      List<Module> toCompile = new SmartList<>();
-
-      for (ProjectTask buildProjectTask : buildTasks) {
-        ModuleBuildTask moduleBuildTask = (ModuleBuildTask)buildProjectTask;
-
-        if (moduleBuildTask.isIncrementalBuild()) {
-          toMake.add(moduleBuildTask.getModule());
-        }
-        else {
-          toCompile.add(moduleBuildTask.getModule());
-        }
-      }
-      CompilerManager compilerManager = CompilerManager.getInstance(project);
-      if (!toMake.isEmpty()) {
-        CompileScope scope = createScope(project, compilerManager, context, toMake);
-        // TODO handle multiple notifications
-        compilerManager.make(scope, compileNotification);
-      }
-      if (!toCompile.isEmpty()) {
-        CompileScope scope = createScope(project, compilerManager, context, toCompile);
-        // TODO handle multiple notifications
-        compilerManager.compile(scope, compileNotification);
-      }
+    CompilerManager compilerManager = CompilerManager.getInstance(project);
+    CompileScope scope = createScope(compilerManager, context,
+                                     modulesBuildSettings.modules,
+                                     modulesBuildSettings.includeDependentModules,
+                                     modulesBuildSettings.includeRuntimeDependencies);
+    if (modulesBuildSettings.isIncrementalBuild) {
+      compilerManager.make(scope, compileNotification);
+    }
+    else {
+      compilerManager.compile(scope, compileNotification);
     }
   }
 
+  private static class ModulesBuildSettings {
+    final boolean isIncrementalBuild;
+    final boolean includeDependentModules;
+    final boolean includeRuntimeDependencies;
+    final Collection<Module> modules;
 
-  private static CompileScope createScope(Project project,
-                                          CompilerManager compilerManager,
+    public ModulesBuildSettings(boolean isIncrementalBuild,
+                                boolean includeDependentModules,
+                                boolean includeRuntimeDependencies,
+                                Collection<Module> modules) {
+      this.isIncrementalBuild = isIncrementalBuild;
+      this.includeDependentModules = includeDependentModules;
+      this.includeRuntimeDependencies = includeRuntimeDependencies;
+      this.modules = modules;
+    }
+  }
+
+  private static ModulesBuildSettings assembleModulesBuildSettings(Collection<? extends ProjectTask> buildTasks) {
+    Collection<Module> modules = new SmartList<>();
+    Collection<ModuleBuildTask> incrementalTasks = ContainerUtil.newSmartList();
+    Collection<ModuleBuildTask> excludeDependentTasks = ContainerUtil.newSmartList();
+    Collection<ModuleBuildTask> excludeRuntimeTasks = ContainerUtil.newSmartList();
+
+    for (ProjectTask buildProjectTask : buildTasks) {
+      ModuleBuildTask moduleBuildTask = (ModuleBuildTask)buildProjectTask;
+      modules.add(moduleBuildTask.getModule());
+
+      if (moduleBuildTask.isIncrementalBuild()) {
+        incrementalTasks.add(moduleBuildTask);
+      }
+      if (!moduleBuildTask.isIncludeDependentModules()) {
+        excludeDependentTasks.add(moduleBuildTask);
+      }
+      if (!moduleBuildTask.isIncludeRuntimeDependencies()) {
+        excludeRuntimeTasks.add(moduleBuildTask);
+      }
+    }
+
+    boolean isIncrementalBuild = incrementalTasks.size() == buildTasks.size();
+    boolean includeDependentModules = excludeDependentTasks.size() != buildTasks.size();
+    boolean includeRuntimeDependencies = excludeRuntimeTasks.size() != buildTasks.size();
+
+    if (!isIncrementalBuild && !incrementalTasks.isEmpty()) {
+      assertModuleBuildSettingsConsistent(incrementalTasks, "will be built ignoring incremental build setting");
+    }
+    if (includeDependentModules && !excludeDependentTasks.isEmpty()) {
+      assertModuleBuildSettingsConsistent(excludeDependentTasks, "will be built along with dependent modules");
+    }
+    if (includeRuntimeDependencies && !excludeRuntimeTasks.isEmpty()) {
+      assertModuleBuildSettingsConsistent(excludeRuntimeTasks, "will be built along with runtime dependencies");
+    }
+    return new ModulesBuildSettings(isIncrementalBuild, includeDependentModules, includeRuntimeDependencies, modules);
+  }
+
+  private static void assertModuleBuildSettingsConsistent(Collection<ModuleBuildTask> moduleBuildTasks, String warnMsg) {
+    String moduleNames = StringUtil.join(moduleBuildTasks, task -> task.getModule().getName(), ", ");
+    LOG.warn("Module" + (moduleBuildTasks.size() > 1 ? "s": "") + " : '" + moduleNames + "' " + warnMsg);
+  }
+
+  private static CompileScope createScope(CompilerManager compilerManager,
                                           ProjectTaskContext context,
-                                          Collection<Module> modules) {
-    CompileScope scope = compilerManager.createModuleGroupCompileScope(project, modules.toArray(new Module[modules.size()]), true);
+                                          Collection<Module> modules,
+                                          boolean includeDependentModules,
+                                          boolean includeRuntimeDependencies) {
+    CompileScope scope = compilerManager.createModulesCompileScope(
+      modules.toArray(new Module[modules.size()]), includeDependentModules, includeRuntimeDependencies);
     RunConfiguration configuration = context.getRunConfiguration();
     if (configuration != null) {
       scope.putUserData(CompilerManager.RUN_CONFIGURATION_KEY, configuration);

@@ -16,6 +16,7 @@
 
 package com.intellij.util.ui;
 
+import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.ScalableIcon;
 import org.jetbrains.annotations.NotNull;
 
@@ -28,35 +29,47 @@ import java.util.Map;
 /**
  * @author max
  * @author Konstantin Bulenkov
+ * @author tav
  *
  * @see ColorIcon
  */
-public class EmptyIcon implements Icon, ScalableIcon {
-  private static final Map<Integer, Icon> cache = new HashMap<Integer, Icon>();
+public class EmptyIcon extends JBUI.JBAbstractIcon implements Icon, ScalableIcon {
+  private static final Map<Pair<Integer, Float>, EmptyIcon> cache =
+    new HashMap<Pair<Integer, Float>, EmptyIcon>(); // (size, jbuiScale) -> (icon)
 
-  public static final Icon ICON_16 = create(16);
-  public static final Icon ICON_18 = create(18);
-  public static final Icon ICON_8 = create(8);
-  public static final Icon ICON_0 = create(0);
+  public static final Icon ICON_16 = JBUI.scale(create(16));
+  public static final Icon ICON_18 = JBUI.scale(create(18));
+  public static final Icon ICON_8 = JBUI.scale(create(8));
+  public static final Icon ICON_0 = JBUI.scale(create(0));
 
-  private final int width;
-  private final int height;
+  protected final int width;
+  protected final int height;
   protected float scale = 1f;
   private EmptyIcon myScaledCache;
+  protected boolean myUseCache;
 
-  public static Icon create(int size) {
-    Icon icon = cache.get(size);
-    if (icon == null && size < 129) {
-      cache.put(size, icon = new EmptyIcon(size, size));
-    }
-    return icon == null ? new EmptyIcon(size, size) : icon;
+  /**
+   * Creates an icon of the provided size.
+   *
+   * Use {@link JBUI#scale(EmptyIcon)} to meet HiDPI.
+   */
+  public static EmptyIcon create(int size) {
+    return create(size, size);
   }
 
-  public static Icon create(int width, int height) {
-    return width == height ? create(width) : new EmptyIcon(width, height);
+  /**
+   * Creates an icon of the provided size.
+   *
+   * Use {@link JBUI#scale(EmptyIcon)} to meet HiDPI.
+   */
+  public static EmptyIcon create(int width, int height) {
+    return create(width, height, 1f, false);
   }
 
-  public static Icon create(@NotNull Icon base) {
+  /**
+   * Creates an icon of the size of the provided icon base.
+   */
+  public static EmptyIcon create(@NotNull Icon base) {
     return create(base.getIconWidth(), base.getIconHeight());
   }
 
@@ -67,9 +80,17 @@ public class EmptyIcon implements Icon, ScalableIcon {
     this(size, size);
   }
 
+  /**
+   * @deprecated use {@linkplain #create(int, int)} for caching.
+   */
   public EmptyIcon(int width, int height) {
+    this(width, height, false);
+  }
+
+  private EmptyIcon(int width, int height, boolean useCache) {
     this.width = width;
     this.height = height;
+    this.myUseCache = useCache;
   }
 
   /**
@@ -80,13 +101,38 @@ public class EmptyIcon implements Icon, ScalableIcon {
   }
 
   @Override
+  public EmptyIcon withJBUIScale(float jbuiScale) {
+    if (myUseCache && getJBUIScale() != jbuiScale) {
+      Pair<Integer, Float> key = key(width, height, getJBUIScale());
+      if (key != null) cache.remove(key); // rather useless to keep it in cache
+      return create(width, height, jbuiScale, false);
+    }
+    return (EmptyIcon)super.withJBUIScale(jbuiScale);
+  }
+
+  private static EmptyIcon create(int width, int height, float jbuiScale, boolean asUIResource) {
+    Pair<Integer, Float> key = key(width, height, jbuiScale);
+    EmptyIcon icon = (key != null) ? cache.get(key) : null;
+    if (icon == null) {
+      icon = asUIResource ? new EmptyIconUIResource(width, height, true) : new EmptyIcon(width, height, true);
+      icon.setJBUIScale(jbuiScale);
+      if (key != null) cache.put(key, icon);
+    }
+    return icon;
+  }
+
+  private static Pair<Integer, Float> key(int width, int height, float jbuiScale) {
+    return (width == height && width < 129) ? Pair.create(width, jbuiScale) : null;
+  }
+
+  @Override
   public int getIconWidth() {
-    return scale(width);
+    return scaleVal(width);
   }
 
   @Override
   public int getIconHeight() {
-    return scale(height);
+    return scaleVal(height);
   }
 
   @Override
@@ -102,6 +148,7 @@ public class EmptyIcon implements Icon, ScalableIcon {
     if (height != icon.height) return false;
     if (width != icon.width) return false;
     if (scale != icon.scale) return false;
+    if (getJBUIScale() != icon.getJBUIScale()) return false;
 
     return true;
   }
@@ -111,6 +158,7 @@ public class EmptyIcon implements Icon, ScalableIcon {
     int result = width;
     result = 31 * result + height;
     result = 31 * result + (scale != +0.0f ? Float.floatToIntBits(scale) : 0);
+    result = 31 * result + (getJBUIScale() != +0.0f ? Float.floatToIntBits(getJBUIScale()) : 0);
     return result;
   }
 
@@ -118,8 +166,9 @@ public class EmptyIcon implements Icon, ScalableIcon {
     return new EmptyIconUIResource(this);
   }
 
-  protected int scale(int n) {
-    return scale == 1f ? n : (int) (n * scale);
+  @Override
+  public int scaleVal(int n) {
+    return super.scaleVal(scale == 1f ? n : (int) (n * scale));
   }
 
   @Override
@@ -138,22 +187,17 @@ public class EmptyIcon implements Icon, ScalableIcon {
   }
 
   protected EmptyIcon createScaledInstance(float scale) {
-    final EmptyIcon icon;
-    if (scale != 1f) {
-      icon = this;
-    } else {
-     icon = this instanceof UIResource ? new EmptyIconUIResource(width, height) : new EmptyIcon(width, height);
-    }
-    return icon;
+    return (scale != 1f) ? this : create(width, height, getJBUIScale(), this instanceof UIResource);
   }
 
   public static class EmptyIconUIResource extends EmptyIcon implements UIResource {
     public EmptyIconUIResource(EmptyIcon icon) {
       super(icon.width, icon.height);
+      setJBUIScale(icon.getJBUIScale());
     }
 
-    private EmptyIconUIResource(int width, int height) {
-      super(width, height);
+    private EmptyIconUIResource(int width, int height, boolean useCache) {
+      super(width, height, useCache);
     }
   }
 }

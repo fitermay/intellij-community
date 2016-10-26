@@ -157,8 +157,15 @@ public class JBUI {
     return insets(0, 0, 0, r);
   }
 
-  public static EmptyIcon emptyIcon(int i) {
-    return (EmptyIcon)EmptyIcon.create(scale(i));
+  /**
+   * @deprecated use JBUI.scale(EmptyIcon.create(size)) instead
+   */
+  public static EmptyIcon emptyIcon(int size) {
+    return scale(EmptyIcon.create(size));
+  }
+
+  public static <T extends JBIcon> T scale(T icon) {
+    return (T)icon.withJBUIScale(scale(1f));
   }
 
   public static JBDimension emptySize() {
@@ -261,6 +268,52 @@ public class JBUI {
 
     public static BorderLayoutPanel simplePanel(int hgap, int vgap) {
       return new BorderLayoutPanel(hgap, vgap);
+    }
+  }
+
+  public static class ComboBox {
+    /**
+     *        JComboBox<String> comboBox = new ComboBox<>(new String[] {"First", "Second", "Third"});
+     *        comboBox.setEditable(true);
+     *        comboBox.setEditor(JBUI.ComboBox.compositeComboboxEditor(new JTextField(), new JLabel(AllIcons.Icon_CE)));
+     *
+     *        @param components an array of JComponent objects. The first one is the editable text component.
+     */
+/*    public static ComboBoxCompositeEditor compositeComboboxEditor  (JComponent ... components) {
+      return new ComboBoxCompositeEditor(components);
+    }*/
+  }
+
+  /**
+   * Supplies an Icon with JBUI scale factor to meet HiDPI.
+   */
+  public interface JBIcon extends Icon {
+    float getJBUIScale();
+    JBIcon withJBUIScale(float jbuiScale);
+    int scaleVal(int value);
+  }
+
+  public static abstract class JBAbstractIcon implements JBIcon {
+    private float jbuiScale = 1f;
+
+    @Override
+    public float getJBUIScale() {
+      return jbuiScale;
+    }
+
+    protected void setJBUIScale(float jbuiScale) {
+      this.jbuiScale = jbuiScale;
+    }
+
+    @Override
+    public JBIcon withJBUIScale(float jbuiScale) {
+      setJBUIScale(jbuiScale);
+      return this;
+    }
+
+    @Override
+    public int scaleVal(int value) {
+      return (int)(value * jbuiScale);
     }
   }
 }

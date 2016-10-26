@@ -19,10 +19,7 @@ import com.intellij.JavaTestUtil;
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.pom.java.LanguageLevel;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiReference;
-import com.intellij.psi.PsiReferenceExpression;
+import com.intellij.psi.*;
 import com.intellij.refactoring.BaseRefactoringProcessor;
 import com.intellij.refactoring.LightRefactoringTestCase;
 import com.intellij.refactoring.MockInlineMethodOptions;
@@ -107,7 +104,15 @@ public class InlineMethodTest extends LightRefactoringTestCase {
   
   public void testChainingConstructor() throws Exception { doTest(); }
 
-  public void testChainingConstructor1() throws Exception { doTest(); }
+  public void testChainingConstructor1() throws Exception {
+    BaseRefactoringProcessor.ConflictsInTestsException.setTestIgnore(true);
+    try {
+      doTest();
+    }
+    finally {
+      BaseRefactoringProcessor.ConflictsInTestsException.setTestIgnore(false);
+    }
+  }
 
   public void testNestedCall() throws Exception { doTest(); }
 
@@ -340,6 +345,10 @@ public class InlineMethodTest extends LightRefactoringTestCase {
     doTest();
   }
 
+  public void testRespectProjectScopeSrcConstructorCall() throws Exception {
+    doTest();
+  }
+
   @Override
   protected Sdk getProjectJDK() {
     return getTestName(false).contains("Src") ? IdeaTestUtil.getMockJdk17() : super.getProjectJDK();
@@ -377,6 +386,12 @@ public class InlineMethodTest extends LightRefactoringTestCase {
     PsiElement element = TargetElementUtil
       .findTargetElement(myEditor, TargetElementUtil.ELEMENT_NAME_ACCEPTED | TargetElementUtil.REFERENCED_ELEMENT_ACCEPTED);
     final PsiReference ref = myFile.findReferenceAt(myEditor.getCaretModel().getOffset());
+    if (ref instanceof PsiJavaCodeReferenceElement) {
+      final PsiElement parent = ((PsiJavaCodeReferenceElement)ref).getParent();
+      if (parent instanceof PsiNewExpression) {
+        element = ((PsiNewExpression)parent).resolveConstructor();
+      }
+    }
     PsiReferenceExpression refExpr = ref instanceof PsiReferenceExpression ? (PsiReferenceExpression)ref : null;
     assertTrue(element instanceof PsiMethod);
     PsiMethod method = (PsiMethod)element.getNavigationElement();

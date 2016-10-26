@@ -164,6 +164,8 @@
       <with attribute="implementationClass" implements="com.intellij.internal.statistic.connect.StatisticsService"/>
     </extensionPoint>
 
+    <extensionPoint name="uiDropperActions" interface="com.intellij.internal.inspector.UiDropperActionExtension"/>
+
     <extensionPoint name="productivityFeaturesProvider" interface="com.intellij.featureStatistics.ProductivityFeaturesProvider"/>
 
     <extensionPoint name="fileIconProvider" interface="com.intellij.ide.FileIconProvider"/>
@@ -216,6 +218,8 @@
     <extensionPoint name="search.topHitProvider" interface="com.intellij.ide.SearchTopHitProvider"/>
 
     <extensionPoint name="search.optionContributor" interface="com.intellij.ide.ui.search.SearchableOptionContributor"/>
+
+    <extensionPoint name="pluginReplacement" interface="com.intellij.ide.plugins.PluginReplacement"/>
 
     <extensionPoint name="ui.suitableFontProvider" interface="com.intellij.ui.SuitableFontProvider"/>
 

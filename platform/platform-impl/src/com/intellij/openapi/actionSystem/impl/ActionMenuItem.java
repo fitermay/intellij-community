@@ -1,5 +1,5 @@
 /*
- * Copyright 2000-2015 JetBrains s.r.o.
+ * Copyright 2000-2016 JetBrains s.r.o.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,12 +35,14 @@ import com.intellij.ui.plaf.beg.BegMenuItemUI;
 import com.intellij.ui.plaf.gtk.GtkMenuItemUI;
 import com.intellij.util.PlatformIcons;
 import com.intellij.util.ui.EmptyIcon;
+import com.intellij.util.ui.JBUI;
 import com.intellij.util.ui.UIUtil;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import javax.swing.plaf.MenuItemUI;
+import javax.swing.plaf.synth.SynthMenuItemUI;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -52,7 +54,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ActionMenuItem extends JBCheckBoxMenuItem {
-  private static final Icon ourCheckedIcon = new SizedIcon(PlatformIcons.CHECK_ICON, 18, 18);
+  private static final Icon ourCheckedIcon = JBUI.scale(new SizedIcon(PlatformIcons.CHECK_ICON, 18, 18));
   private static final Icon ourUncheckedIcon = EmptyIcon.ICON_18;
 
   private final ActionRef<AnAction> myAction;
@@ -187,8 +189,8 @@ public class ActionMenuItem extends JBCheckBoxMenuItem {
   }
 
   @Override
-  public void setUI(final MenuItemUI ui) {
-    final MenuItemUI newUi = UIUtil.isUnderGTKLookAndFeel() && GtkMenuItemUI.isUiAcceptable(ui) ? new GtkMenuItemUI(ui) : ui;
+  public void setUI(MenuItemUI ui) {
+    MenuItemUI newUi = UIUtil.isUnderGTKLookAndFeel() && ui instanceof SynthMenuItemUI ? new GtkMenuItemUI((SynthMenuItemUI)ui) : ui;
     super.setUI(newUi);
   }
 

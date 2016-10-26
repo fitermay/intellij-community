@@ -17,9 +17,10 @@ package com.intellij.ide.impl;
 
 import com.intellij.ide.DataManager;
 import com.intellij.ide.IdeEventQueue;
+import com.intellij.ide.ProhibitAWTEvents;
 import com.intellij.ide.impl.dataRules.*;
 import com.intellij.openapi.actionSystem.*;
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.AccessToken;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
@@ -52,7 +53,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class DataManagerImpl extends DataManager {
   private static final Logger LOG = Logger.getInstance("#com.intellij.ide.impl.DataManagerImpl");
@@ -65,11 +65,13 @@ public class DataManagerImpl extends DataManager {
 
   @Nullable
   private Object getData(@NotNull String dataId, final Component focusedComponent) {
-    for (Component c = focusedComponent; c != null; c = c.getParent()) {
-      final DataProvider dataProvider = getDataProviderEx(c);
-      if (dataProvider == null) continue;
-      Object data = getDataFromProvider(dataProvider, dataId, null);
-      if (data != null) return data;
+    try (AccessToken ignored = ProhibitAWTEvents.start("getData")) {
+      for (Component c = focusedComponent; c != null; c = c.getParent()) {
+        final DataProvider dataProvider = getDataProviderEx(c);
+        if (dataProvider == null) continue;
+        Object data = getDataFromProvider(dataProvider, dataId, null);
+        if (data != null) return data;
+      }
     }
     return null;
   }
@@ -212,21 +214,8 @@ public class DataManagerImpl extends DataManager {
   @Override
   public AsyncResult<DataContext> getDataContextFromFocus() {
     AsyncResult<DataContext> context = new AsyncResult<>();
-    doWhenFocusSettlesDownInModality(context, ModalityState.current());
+    IdeFocusManager.getGlobalInstance().doWhenFocusSettlesDown(() -> context.setDone(getDataContext()), ModalityState.current());
     return context;
-  }
-
-  private void doWhenFocusSettlesDownInModality(AsyncResult<DataContext> context, ModalityState modality) {
-    AtomicBoolean immediate = new AtomicBoolean(true);
-    IdeFocusManager.getGlobalInstance().doWhenFocusSettlesDown(() -> {
-      if (immediate.get()) {
-        context.setDone(getDataContext());
-        return;
-      }
-
-      ApplicationManager.getApplication().invokeLater(() -> doWhenFocusSettlesDownInModality(context, modality), modality);
-    });
-    immediate.set(false);
   }
 
   public DataContext getDataContextTest(Component component) {

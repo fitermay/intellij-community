@@ -55,11 +55,13 @@ public class DataFlowInspectionTest extends DataFlowInspectionTestCase {
   public void testBuildRegexpNotComplex() throws Throwable { doTest(); }
   public void testTernaryInWhileNotComplex() throws Throwable { doTest(); }
   public void testTryCatchInForNotComplex() throws Throwable { doTest(); }
+  public void testTryReturnCatchInWhileNotComplex() throws Throwable { doTest(); }
   public void testNestedTryInWhileNotComplex() throws Throwable { doTest(); }
   public void testExceptionFromFinally() throws Throwable { doTest(); }
   public void testExceptionFromFinallyNesting() throws Throwable { doTest(); }
   public void testNestedFinally() { doTest(); }
   public void testTryFinallyInsideFinally() { doTest(); }
+  public void testBreakContinueViaFinally() { doTest(); }
   public void testFieldChangedBetweenSynchronizedBlocks() throws Throwable { doTest(); }
 
   public void testGeneratedEquals() throws Throwable { doTest(); }
@@ -398,5 +400,14 @@ public class DataFlowInspectionTest extends DataFlowInspectionTestCase {
   public void testLiteralIfCondition() {
     doTest();
     myFixture.findSingleIntention("Remove 'if' statement");
+  }
+
+  //https://youtrack.jetbrains.com/issue/IDEA-162184
+  public void testNullLiteralAndInferredMethodContract() {
+    doTest();
+  }
+  public void testNullLiteralArgumentDoesntReportedWhenMethodOnlyThrowAnException() { doTest(); }
+  public void testNullLiteralArgumentValueUsedAsReturnValue() {
+    doTest();
   }
 }

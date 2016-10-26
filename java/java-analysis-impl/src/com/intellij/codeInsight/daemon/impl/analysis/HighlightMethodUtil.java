@@ -24,6 +24,7 @@ import com.intellij.codeInsight.daemon.impl.quickfix.*;
 import com.intellij.codeInsight.intention.IntentionAction;
 import com.intellij.codeInsight.intention.QuickFixFactory;
 import com.intellij.codeInspection.LocalQuickFixOnPsiElementAsIntentionAdapter;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.openapi.projectRoots.JavaSdkVersion;
 import com.intellij.openapi.util.Comparing;
@@ -62,6 +63,7 @@ import java.util.List;
 public class HighlightMethodUtil {
   private static final QuickFixFactory QUICK_FIX_FACTORY = QuickFixFactory.getInstance();
   private static final String MISMATCH_COLOR = UIUtil.isUnderDarcula() ? "ff6464" : "red";
+  private static final Logger LOG = Logger.getInstance(HighlightMethodUtil.class);
 
   private HighlightMethodUtil() { }
 
@@ -270,6 +272,9 @@ public class HighlightMethodUtil {
     List<PsiClassType> checkedExceptions = new ArrayList<>();
     for (int i = 0; i < exceptions.length; i++) {
       PsiClassType exception = exceptions[i];
+      if (exception == null) {
+        LOG.error("throws: " + method.getThrowsList().getText() + "; method: " + method);
+      }
       if (!ExceptionUtil.isUncheckedException(exception)) {
         checkedExceptions.add(exception);
         if (includeRealPositionInfo && i < referenceElements.length) {
@@ -651,13 +656,13 @@ public class HighlightMethodUtil {
     if (methodCandidate2 != null) {
       PsiMethod element1 = methodCandidate1.getElement();
       String m1 = PsiFormatUtil.formatMethod(element1,
-                                             methodCandidate1.getSubstitutor(),
+                                             methodCandidate1.getSubstitutor(false),
                                              PsiFormatUtilBase.SHOW_CONTAINING_CLASS | PsiFormatUtilBase.SHOW_NAME |
                                              PsiFormatUtilBase.SHOW_PARAMETERS,
                                              PsiFormatUtilBase.SHOW_TYPE);
       PsiMethod element2 = methodCandidate2.getElement();
       String m2 = PsiFormatUtil.formatMethod(element2,
-                                             methodCandidate2.getSubstitutor(),
+                                             methodCandidate2.getSubstitutor(false),
                                              PsiFormatUtilBase.SHOW_CONTAINING_CLASS | PsiFormatUtilBase.SHOW_NAME |
                                              PsiFormatUtilBase.SHOW_PARAMETERS,
                                              PsiFormatUtilBase.SHOW_TYPE);
