@@ -54,7 +54,6 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.testFramework.LightVirtualFile;
 import com.intellij.util.ExceptionUtil;
-import com.intellij.util.ObjectUtils;
 import com.intellij.util.PathUtil;
 import com.intellij.util.containers.ContainerUtil;
 import com.intellij.util.io.SafeFileOutputStream;
@@ -212,7 +211,7 @@ public class ConsoleHistoryController {
     boolean result = myHelper.loadHistory(id, myConsole.getVirtualFile());
     String userValue = myHelper.getContent();
     if (prev != userValue && userValue != null) {
-      setConsoleText(userValue, false, false);
+      setConsoleText(new ConsoleHistoryModel.TextWithOffset(userValue, -1), false, false);
     }
     return result;
   }
@@ -236,8 +235,8 @@ public class ConsoleHistoryController {
     return myBrowseHistory;
   }
 
-  protected void setConsoleText(final String command, final boolean storeUserText, final boolean regularMode) {
-    if (regularMode && myMultiline && StringUtil.isEmptyOrSpaces(command)) return;
+  protected void setConsoleText(final ConsoleHistoryModel.TextWithOffset command, final boolean storeUserText, final boolean regularMode) {
+    if (regularMode && myMultiline && StringUtil.isEmptyOrSpaces(command.getText())) return;
     final Editor editor = myConsole.getCurrentEditor();
     final Document document = editor.getDocument();
     new WriteCommandAction.Simple(myConsole.getProject()) {
@@ -245,10 +244,11 @@ public class ConsoleHistoryController {
       public void run() {
         if (storeUserText) {
           String text = document.getText();
-          if (Comparing.equal(command, text) && myHelper.getContent() != null) return;
+          if (Comparing.equal(command.getText(), text) && myHelper.getContent() != null) return;
           myHelper.setContent(text);
+          myHelper.getModel().setContent(text);
         }
-        String text = StringUtil.notNullize(command);
+        String text = StringUtil.notNullize(command.getText());
         int offset;
         if (regularMode) {
           if (myMultiline) {
@@ -256,7 +256,7 @@ public class ConsoleHistoryController {
           }
           else {
             document.setText(text);
-            offset = document.getTextLength();
+            offset = command.getOffset() == -1 ? document.getTextLength() : command.getOffset();
           }
         }
         else {
@@ -300,15 +300,9 @@ public class ConsoleHistoryController {
 
     @Override
     public void actionPerformed(final AnActionEvent e) {
-      String command;
-      if (myNext) {
-        command = getModel().getHistoryNext();
-        if (!myMultiline && command == null) return;
-      }
-      else {
-        command = ObjectUtils.chooseNotNull(getModel().getHistoryPrev(), myMultiline ? "" : StringUtil.notNullize(myHelper.getContent()));
-      }
-      setConsoleText(command, myNext && !getModel().hasHistory(false), true);
+      ConsoleHistoryModel.TextWithOffset command = myNext ? getModel().getHistoryNext() : getModel().getHistoryPrev();
+      if (!myMultiline && command == null) return;
+      setConsoleText(command, myNext && !getModel().hasHistory(), true);
     }
 
     @Override
@@ -342,7 +336,7 @@ public class ConsoleHistoryController {
     else {
       final int lineCount = document.getLineCount();
       return (lineCount == 0 || document.getLineNumber(caretModel.getOffset()) == lineCount - 1) &&
-             StringUtil.isEmptyOrSpaces(document.getText().substring(caretModel.getOffset()));
+             (StringUtil.isEmptyOrSpaces(document.getText().substring(caretModel.getOffset())) || myHelper.getModel().prevOnLastLine());
     }
   }
 
@@ -410,7 +404,7 @@ public class ConsoleHistoryController {
       chooser.setSplitterOrientation(false);
       chooser.setSelectedIndex(Math.max(0, getModel().getHistorySize() - getModel().getCurrentIndex() - 1));
       if (chooser.showAndGet() && myConsole.getCurrentEditor().getComponent().isShowing()) {
-        setConsoleText(chooser.getSelectedText(), false, true);
+        setConsoleText(new ConsoleHistoryModel.TextWithOffset(chooser.getSelectedText(), -1), false, true);
       }
     }
   }
