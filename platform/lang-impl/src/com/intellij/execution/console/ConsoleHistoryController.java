@@ -89,7 +89,7 @@ public class ConsoleHistoryController {
 
     @Override
     protected ConsoleHistoryModel create(String key) {
-      return new ConsoleHistoryModel(null);
+      return new DefaultConsoleHistoryModel(null);
     }
   };
   private final static Map<LanguageConsoleView, ConsoleHistoryController> ourControllers =
