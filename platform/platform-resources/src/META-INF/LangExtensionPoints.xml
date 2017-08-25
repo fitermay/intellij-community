@@ -314,7 +314,7 @@
 
     <extensionPoint name="scopeDescriptorProvider" interface="com.intellij.ide.util.scopeChooser.ScopeDescriptorProvider"/>
     <extensionPoint name="patternDialectProvider" interface="com.intellij.packageDependencies.ui.PatternDialectProvider"/>
-
+    <extensionPoint name="inspectionListener" interface="com.intellij.codeInspection.InspectionListenerEP"/>
     <extensionPoint name="localInspection"
                     beanClass="com.intellij.codeInspection.LocalInspectionEP">
       <with attribute="implementationClass" implements="com.intellij.codeInspection.LocalInspectionTool"/>

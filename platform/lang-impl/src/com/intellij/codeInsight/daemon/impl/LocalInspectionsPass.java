@@ -279,8 +279,15 @@ public class LocalInspectionsPass extends ProgressableTextEditorHighlightingPass
         }
     };
 
-    PsiElementVisitor visitor = InspectionEngine.createVisitorAndAcceptElements(tool, holder, isOnTheFly, session, elements, elementDialectIds,
-                                                                                dialectIdsSpecifiedForTool);
+    PsiElementVisitor visitor;
+    try {
+      InspectionListenerEP.notifySessionBegin(session);
+      visitor = InspectionEngine.createVisitorAndAcceptElements(tool, holder, isOnTheFly, session, elements, elementDialectIds,
+                                                                dialectIdsSpecifiedForTool);
+    }
+    finally {
+      InspectionListenerEP.notifySessionEnd(session);
+    }
 
     synchronized (init) {
       init.add(new InspectionContext(toolWrapper, holder, holder.getResultCount(), visitor, dialectIdsSpecifiedForTool));
@@ -302,7 +309,14 @@ public class LocalInspectionsPass extends ProgressableTextEditorHighlightingPass
       context -> {
         ProgressManager.checkCanceled();
         ApplicationManager.getApplication().assertReadAccessAllowed();
-        InspectionEngine.acceptElements(elements, context.visitor, elementDialectIds, context.dialectIdsSpecifiedForTool);
+
+        try {
+          InspectionListenerEP.notifySessionBegin(session);
+          InspectionEngine.acceptElements(elements, context.visitor, elementDialectIds, context.dialectIdsSpecifiedForTool);
+        }
+        finally {
+          InspectionListenerEP.notifySessionEnd(session);
+        }
         advanceProgress(1);
         context.tool.getTool().inspectionFinished(session, context.holder);
 

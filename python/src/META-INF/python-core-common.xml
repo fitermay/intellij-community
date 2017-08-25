@@ -619,6 +619,7 @@
     <projectService serviceInterface="com.jetbrains.python.debugger.containerview.PyDataView" serviceImplementation="com.jetbrains.python.debugger.containerview.PyDataView"/>
 
     <createFromTemplateHandler implementation="com.jetbrains.python.packaging.setupPy.PyCreateSetupPyFromTemplateHandler"/>
+    <inspectionListener implementation="com.jetbrains.python.psi.InspectionUnstubTracker$InspectionTracerEP"/>
   </extensions>
 
   <extensionPoints>
@@ -875,4 +876,9 @@
       <implementation-class>com.jetbrains.python.testing.PyTestLegacyInteropInitializer</implementation-class>
     </component>
   </application-components>
+  <project-components>
+    <component>
+      <implementation-class>com.jetbrains.python.psi.InspectionUnstubTracker</implementation-class>
+    </component>
+  </project-components>
 </idea-plugin>
