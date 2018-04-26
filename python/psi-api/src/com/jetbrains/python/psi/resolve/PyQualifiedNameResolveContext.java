@@ -19,9 +19,6 @@ import com.intellij.openapi.module.Module;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.projectRoots.Sdk;
 import com.intellij.psi.PsiDirectory;
-import com.intellij.psi.PsiElement;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -30,32 +27,18 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author vlan
  */
-public interface PyQualifiedNameResolveContext {
-  @Nullable
-  PsiElement getFoothold();
+public interface PyQualifiedNameResolveContext extends PyQualifiedNameResolveFootHold {
+
   int getRelativeLevel();
-  @Nullable
-  Sdk getSdk();
-  @Nullable
-  Module getModule();
-  @NotNull
-  Project getProject();
+
   boolean getWithoutRoots();
   boolean getWithoutForeign();
   boolean getWithoutStubs();
-  @NotNull
-  PsiManager getPsiManager();
+
   boolean getWithMembers();
   boolean getWithPlainDirectories();
   boolean getVisitAllModules();
-  @Nullable
-  Sdk getEffectiveSdk();
 
-  boolean isValid();
-  @Nullable
-  PsiFile getFootholdFile();
-  @Nullable
-  PsiDirectory getContainingDirectory();
 
   @NotNull
   PyQualifiedNameResolveContext copyWithoutForeign();

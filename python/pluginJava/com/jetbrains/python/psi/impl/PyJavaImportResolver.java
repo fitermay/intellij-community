@@ -30,6 +30,10 @@ import org.jetbrains.annotations.Nullable;
 public class PyJavaImportResolver implements PyImportResolver {
   @Nullable
   public PsiElement resolveImportReference(QualifiedName name, PyQualifiedNameResolveContext context, boolean withRoots) {
+
+    if (!withRoots || context.getWithoutRoots()) {
+      return null;
+    }
     String fqn = name.toString();
     final JavaPsiFacade psiFacade = JavaPsiFacade.getInstance(context.getProject());
     final PsiPackage aPackage = psiFacade.findPackage(fqn);
